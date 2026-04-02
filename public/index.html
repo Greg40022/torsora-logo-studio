@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TORSORA — Générateur de Logo SVG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@300;400;500;600;700&family=Barlow+Condensed:wght@300;400;500;600;700;800;900&family=Anton&family=Chakra+Petch:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Sora:wght@100;200;300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: #0a1020;
+  color: #c8d0e4;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER ── */
+.hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  padding: 0 18px;
+  background: #060d1a;
+  border-bottom: 1px solid #162035;
+  flex-shrink: 0;
+}
+.hdr-left { display: flex; align-items: center; gap: 12px; }
+.hdr-dots { display: flex; gap: 5px; }
+.hdr-dots span { width: 10px; height: 10px; border-radius: 50%; }
+.hdr-dots span:nth-child(1) { background: #ff5f57; }
+.hdr-dots span:nth-child(2) { background: #febc2e; }
+.hdr-dots span:nth-child(3) { background: #28c840; }
+.hdr-title { font-size: 12px; font-weight: 500; color: #5a6a8a; letter-spacing: 0.04em; }
+.hdr-title strong { color: #a0aeca; font-weight: 700; letter-spacing: 0.06em; }
+.hdr-save-btn { height: 28px; padding: 0 12px; background: #1a3a6e; border: 1.5px solid #2a5aaa; border-radius: 6px; color: #93c5fd; font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; letter-spacing: 0.03em; }
+.hdr-save-btn:hover { background: #1e4a8a; border-color: #3B82F6; color: #bfdbfe; }
+/* ── UNDO/REDO BUTTONS ── */
+.hdr-undo-btn { height: 28px; padding: 0 10px; background: #12223a; border: 1.5px solid #1e3260; border-radius: 6px; color: #5a7aa8; font-family: 'Outfit', sans-serif; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+.hdr-undo-btn:hover:not(:disabled) { background: #1a3050; border-color: #3B82F6; color: #93c5fd; }
+.hdr-undo-btn:disabled { opacity: 0.3; cursor: default; }
+.hdr-undo-group { display: flex; gap: 4px; align-items: center; }
+.hdr-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: linear-gradient(135deg, #7C3AED 0%, #2563EB 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: white; cursor: pointer;
+}
+
+/* ── LAYOUT ── */
+.layout { display: flex; flex: 1; overflow: hidden; }
+
+/* ── LEFT SIDEBAR ── */
+.sidebar {
+  width: 200px;
+  background: #0c1424;
+  border-right: 1px solid #162035;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.sidebar-hd {
+  padding: 11px 14px 9px;
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: #2e3d58;
+  border-bottom: 1px solid #101a2c;
+  flex-shrink: 0;
+}
+.preset-list { overflow-y: auto; flex: 1; padding: 7px 6px; }
+.preset-list::-webkit-scrollbar { width: 3px; }
+.preset-list::-webkit-scrollbar-thumb { background: #1e2d46; border-radius: 2px; }
+
+.preset-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 8px; border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.14s, border-color 0.14s;
+  margin-bottom: 2px;
+}
+.preset-item:hover { background: #121e32; }
+.preset-item.active { background: #162240; border-color: #1e3260; }
+
+.preset-icon { width: 30px; height: 49px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.preset-meta { min-width: 0; }
+.preset-name { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preset-hint { font-size: 8.5px; color: #2e3d58; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Add preset */
+.add-preset-trigger {
+  flex-shrink: 0;
+  border-top: 1px dashed #1a2d46;
+  padding: 6px;
+}
+.add-preset-btn {
+  width: 100%; padding: 6px 8px; border-radius: 7px;
+  border: 1.5px dashed #1e3260; background: transparent;
+  color: #3a5080; font-family: 'Outfit', sans-serif;
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  transition: background 0.14s, border-color 0.14s, color 0.14s;
+}
+.add-preset-btn:hover { background: #121e32; border-color: #3B82F6; color: #60a5fa; }
+
+.add-form {
+  padding: 8px 6px;
+  background: #101828;
+  border-top: 1px solid #1a2d46;
+  display: none;
+  flex-shrink: 0;
+}
+.add-form.vis { display: block; }
+.add-form-title {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: #3a5080; margin-bottom: 7px;
+}
+.add-form input[type="text"],
+.add-form input[type="color"] { width: 100%; margin-bottom: 5px; }
+.add-form input[type="text"] {
+  padding: 5px 7px;
+  border: 1.5px solid #1e3260; border-radius: 6px;
+  font-family: 'Outfit', sans-serif; font-size: 11px;
+  color: #c8d0e4; background: #0c1424; outline: none;
+}
+.add-form input[type="text"]:focus { border-color: #3B82F6; }
+.add-form-color-row {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 7px;
+}
+.add-form-color-lbl { font-size: 10px; color: #5a6a90; flex: 1; }
+.add-form-color-inp {
+  width: 36px; height: 22px; border-radius: 5px;
+  border: 1.5px solid #1e3260; padding: 1px; cursor: pointer;
+}
+.add-btn-row { display: flex; gap: 6px; }
+.add-confirm {
+  flex: 1; padding: 5px 8px; border-radius: 6px;
+  border: none; background: #16a34a; color: white;
+  font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700;
+  cursor: pointer; transition: opacity 0.15s;
+}
+.add-confirm:hover { opacity: 0.85; }
+.add-cancel {
+  padding: 5px 8px; border-radius: 6px;
+  border: 1.5px solid #1e3260; background: transparent; color: #5a6a90;
+  font-family: 'Outfit', sans-serif; font-size: 11px; cursor: pointer;
+  transition: border-color 0.14s;
+}
+.add-cancel:hover { border-color: #3a5080; }
+
+/* ── CENTER PREVIEW ── */
+.preview-zone {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: #111928;
+  background-image:
+    radial-gradient(ellipse 55% 35% at 38% 30%, rgba(124,58,237,0.09) 0%, transparent 100%),
+    radial-gradient(ellipse 45% 35% at 65% 70%, rgba(37,99,235,0.09) 0%, transparent 100%);
+  position: relative; overflow: hidden;
+}
+
+.preview-label {
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  background: #162040; border: 1px solid #1e3060;
+  border-radius: 20px; padding: 4px 14px;
+  font-size: 9.5px; font-weight: 600; letter-spacing: 0.12em;
+  text-transform: uppercase; color: #3a5080;
+}
+
+.preview-card {
+  background: white;
+  border-radius: 14px;
+  padding: 50px 70px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 30px 90px rgba(0,0,0,0.55), 0 8px 28px rgba(0,0,0,0.35);
+  transition: background 0.25s, box-shadow 0.25s;
+  min-width: 420px;
+  min-height: 160px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.bg-toggle {
+  position: absolute; bottom: 18px; right: 18px;
+  display: flex; gap: 6px;
+}
+.bg-btn {
+  width: 30px; height: 30px; border-radius: 7px;
+  border: 1.5px solid #1e3060;
+  cursor: pointer; font-size: 9px; font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.15s;
+}
+.bg-btn.active { border-color: #3B82F6; }
+.bg-btn-w { background: white; color: #666; }
+.bg-btn-d { background: #1a2338; color: #8a9ab8; }
+
+/* ── RIGHT CONTROLS ── */
+.controls {
+  width: 248px; background: #f2f4fa;
+  border-left: 1px solid #dde3ef;
+  overflow-y: auto; flex-shrink: 0;
+  color: #1a2338;
+}
+.controls::-webkit-scrollbar { width: 4px; }
+.controls::-webkit-scrollbar-thumb { background: #c5cde0; border-radius: 2px; }
+
+.cs { padding: 12px 14px; border-bottom: 1px solid #e2e7f2; }
+.cl {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: #5a6a90; margin-bottom: 7px; display: block;
+}
+.ci {
+  width: 100%; padding: 7px 9px;
+  border: 1.5px solid #cdd5ea; border-radius: 7px;
+  font-family: 'Outfit', sans-serif; font-size: 12px;
+  color: #1a2338; background: white; outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ci:focus { border-color: #3B82F6; box-shadow: 0 0 0 3px rgba(59,130,246,0.13); }
+
+.swatches { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.sw {
+  width: 25px; height: 25px; border-radius: 6px; cursor: pointer;
+  border: 2.5px solid transparent; transition: transform 0.1s, border-color 0.15s;
+}
+.sw:hover { transform: scale(1.13); }
+.sw.on { border-color: #1a2338 !important; }
+
+.sw-cust {
+  width: 25px; height: 25px; border-radius: 6px;
+  border: 2px dashed #bcc5dc; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: #9aaac8; font-size: 14px;
+  position: relative; overflow: hidden; background: white;
+  transition: border-color 0.15s;
+}
+.sw-cust:hover { border-color: #3B82F6; }
+.sw-cust input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+.txt-tog { display: flex; gap: 5px; }
+.ttbtn {
+  flex: 1; padding: 7px 4px; border-radius: 7px;
+  border: 1.5px solid #cdd5ea; background: white;
+  font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; color: #5a6a90; text-align: center;
+}
+.ttbtn.a-dark { background: #1a2338; border-color: #1a2338; color: white; }
+.ttbtn.a-light { background: #EFF6FF; border-color: #3B82F6; color: #1D4ED8; }
+
+/* Symbol selector */
+.sym-sel { display: flex; gap: 6px; }
+.sym-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 7px 4px; border-radius: 8px;
+  border: 1.5px solid #cdd5ea; background: white;
+  font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 600;
+  color: #5a6a90; cursor: pointer; transition: all 0.15s;
+}
+.sym-btn:hover { border-color: #93c5fd; background: #f0f7ff; }
+.sym-btn.on { border-color: #3B82F6; background: #EFF6FF; color: #1D4ED8; }
+.sym-btn svg { pointer-events: none; }
+
+/* Gradient section */
+.grad-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.grad-col { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.grad-col-lbl { font-size: 9px; font-weight: 600; color: #6b7a9a; letter-spacing: 0.05em; }
+.grad-color-input {
+  width: 100%; height: 30px; border-radius: 6px;
+  border: 1.5px solid #cdd5ea; padding: 2px; cursor: pointer;
+}
+.dir-btns { display: flex; gap: 4px; margin-bottom: 6px; }
+.dir-btn {
+  width: 28px; height: 28px; border-radius: 5px;
+  border: 1.5px solid #cdd5ea; background: white;
+  font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; color: #5a6a90;
+}
+.dir-btn:hover { border-color: #93c5fd; background: #f0f7ff; }
+.dir-btn.on { border-color: #3B82F6; background: #EFF6FF; color: #1D4ED8; }
+.grad-reset {
+  font-size: 10px; color: #3B82F6; cursor: pointer;
+  background: none; border: none; font-family: 'Outfit', sans-serif;
+  padding: 0; text-decoration: underline; font-weight: 500;
+}
+.grad-reset:hover { color: #1D4ED8; }
+
+/* Font sliders / positioning sliders */
+.slider-group { margin-bottom: 7px; }
+.slider-group:last-child { margin-bottom: 0; }
+.slider-label-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 10.5px; color: #5a6a90; margin-bottom: 2px;
+}
+.slider-val { font-size: 10.5px; color: #3B82F6; font-weight: 600; min-width: 28px; text-align: right; }
+input[type="range"] { width: 100%; accent-color: #3B82F6; height: 14px; }
+
+/* Text color rows */
+.txt-color-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.txt-color-lbl { font-size: 10px; font-weight: 600; color: #5a6a90; flex: 1; }
+.txt-color-inp { width: 32px; height: 26px; border-radius: 5px; border: 1.5px solid #cdd5ea; padding: 2px; cursor: pointer; flex-shrink: 0; }
+.upper-btn {
+  width: 30px; height: 26px; border-radius: 5px; flex-shrink: 0;
+  border: 1.5px solid #cdd5ea; background: white;
+  font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 700;
+  color: #9ab0cc; cursor: pointer; transition: all 0.15s;
+}
+.upper-btn.on { border-color: #3B82F6; background: #EFF6FF; color: #1D4ED8; }
+/* Preset edit */
+.preset-name-input { width: 100%; font-size: 10px; font-weight: 600; background: #0a1422; color: #a0aeca; border: 1px solid #3B82F6; border-radius: 3px; padding: 2px 4px; font-family: 'Outfit', sans-serif; outline: none; }
+.preset-edit-btn { opacity: 0; width: 14px; height: 14px; background: none; border: none; color: #3a5080; cursor: pointer; font-size: 10px; flex-shrink: 0; padding: 0; transition: opacity 0.15s; }
+.preset-item:hover .preset-edit-btn { opacity: 1; }
+.preset-del-btn { opacity: 0; width: 14px; height: 14px; background: none; border: none; color: #7a3030; cursor: pointer; font-size: 11px; flex-shrink: 0; padding: 0; transition: opacity 0.15s; line-height: 1; }
+.preset-item:hover .preset-del-btn { opacity: 1; }
+.link-btn { width: 26px; height: 26px; border-radius: 5px; flex-shrink: 0; border: 1.5px solid #cdd5ea; background: white; font-size: 12px; color: #9ab0cc; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; padding: 0; }
+.link-btn.on { border-color: #3B82F6; background: #EFF6FF; color: #1D4ED8; }
+
+/* Gradient stop row: color + pct side by side */
+.gs-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.gs-lbl { font-size: 9px; font-weight: 600; color: #6b7a9a; width: 40px; flex-shrink: 0; }
+.gs-color { width: 32px; height: 24px; border-radius: 5px; border: 1.5px solid #cdd5ea; padding: 2px; cursor: pointer; flex-shrink: 0; }
+.gs-pct-wrap { flex: 1; display: flex; align-items: center; gap: 4px; }
+.gs-pct-val { font-size: 10px; color: #3B82F6; font-weight: 600; min-width: 30px; text-align: right; }
+
+.size-row { display: flex; gap: 5px; }
+.sz-btn {
+  flex: 1; padding: 6px 4px; border-radius: 6px;
+  border: 1.5px solid #cdd5ea; background: white;
+  font-family: 'Outfit', sans-serif; font-size: 10px; font-weight: 600;
+  color: #5a6a90; cursor: pointer; text-align: center; transition: all 0.15s;
+}
+.sz-btn.on { border-color: #3B82F6; background: #EFF6FF; color: #1D4ED8; }
+.sz-btn small { display: block; font-size: 8px; font-weight: 400; margin-top: 1px; }
+
+/* Config save/load */
+.cfg-btns { display: flex; flex-direction: column; gap: 6px; }
+.btn-cfg {
+  width: 100%; padding: 8px 10px; border-radius: 7px; border: none;
+  font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700;
+  cursor: pointer; letter-spacing: 0.04em; text-transform: uppercase;
+  transition: opacity 0.15s, transform 0.1s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-cfg:hover { opacity: 0.87; transform: translateY(-1px); }
+.btn-cfg-save { background: #4f46e5; color: white; }
+.btn-cfg-load { background: #0f766e; color: white; }
+.btn-cfg-reset { background: #64748b; color: white; }
+.btn-cfg label { cursor: pointer; display: flex; align-items: center; gap: 6px; }
+
+.export-sec { padding: 12px 14px 22px; }
+.export-ttl { font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #5a6a90; margin-bottom: 10px; }
+.btn-exp {
+  width: 100%; padding: 10px; border-radius: 8px; border: none;
+  font-family: 'Outfit', sans-serif; font-size: 11.5px; font-weight: 700;
+  cursor: pointer; margin-bottom: 7px; letter-spacing: 0.05em; text-transform: uppercase;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.btn-exp:hover { opacity: 0.87; transform: translateY(-1px); }
+.btn-exp:active { transform: translateY(0); }
+.btn-gen      { background: #16a34a; color: white; }
+.btn-dl       { background: #0891b2; color: white; }
+.btn-png      { background: #7c3aed; color: white; }
+.btn-icon-svg { background: #b45309; color: white; }
+.btn-icon-png { background: #be185d; color: white; }
+
+.section-sep { height: 1px; background: #e2e7f2; margin: 2px 0 10px; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: #1a2338; color: #c8d0e4; padding: 8px 18px; border-radius: 8px;
+  font-size: 12px; font-weight: 600; opacity: 0;
+  transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 9999;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<header class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-dots"><span></span><span></span><span></span></div>
+    <div class="hdr-title"><strong>TORSORA</strong> &mdash; Générateur de Logo SVG</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="hdr-undo-group">
+      <button class="hdr-undo-btn" id="btn-undo" onclick="undo()" title="Annuler (Ctrl+Z)" disabled>&#x21A9;</button>
+      <button class="hdr-undo-btn" id="btn-redo" onclick="redo()" title="Rétablir (Ctrl+Y)" disabled>&#x21AA;</button>
+    </div>
+    <span id="sync-indicator" style="font-size:10px;color:#2e3d58;letter-spacing:0.05em;min-width:60px;text-align:right;">&#x25CF;&nbsp;synced</span>
+    <button class="hdr-save-btn" onclick="saveConfig()">&#x1F4BE; Enregistrer</button>
+    <div class="hdr-avatar">G</div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-hd">Préréglages</div>
+    <div class="preset-list" id="preset-list"></div>
+    <div class="add-form" id="add-form">
+      <div class="add-form-title">Nouveau préréglage</div>
+      <input type="text" id="add-sub" placeholder="Sous-nom (ex: DESIGN)" maxlength="20">
+      <input type="text" id="add-tag" placeholder="Tagline…">
+      <div class="add-form-color-row">
+        <span class="add-form-color-lbl">Couleur d'accent</span>
+        <input type="color" class="add-form-color-inp" id="add-accent" value="#3B82F6">
+      </div>
+      <div class="add-btn-row">
+        <button class="add-confirm" onclick="confirmAddPreset()">Ajouter</button>
+        <button class="add-cancel" onclick="cancelAddPreset()">Annuler</button>
+      </div>
+    </div>
+    <div class="add-preset-trigger">
+      <button class="add-preset-btn" onclick="showAddForm()">
+        <span style="font-size:15px;line-height:1">+</span> Ajouter un préréglage
+      </button>
+    </div>
+  </aside>
+
+  <!-- CENTER PREVIEW -->
+  <main class="preview-zone">
+    <div class="preview-label">Live Preview</div>
+    <div class="preview-card" id="preview-card">
+      <div id="preview-container"></div>
+    </div>
+    <div class="bg-toggle">
+      <button class="bg-btn bg-btn-w active" id="bg-w" onclick="setBg('white')">W</button>
+      <button class="bg-btn bg-btn-d" id="bg-d" onclick="setBg('dark')">D</button>
+    </div>
+  </main>
+
+  <!-- RIGHT CONTROLS -->
+  <aside class="controls">
+
+    <div class="cs">
+      <label class="cl">Symbole DNA</label>
+      <div class="sym-sel" id="sym-sel"></div>
+    </div>
+
+    <div class="cs">
+      <label class="cl">Nom du sous-logo</label>
+      <input class="ci" id="inp-sub" type="text" placeholder="DEV" oninput="state.subName=this.value;renderLogo()">
+    </div>
+
+    <div class="cs">
+      <label class="cl">Sous-texte</label>
+      <input class="ci" id="inp-tag" type="text" placeholder="Code Intelligent & Performant" oninput="state.tagline=this.value;renderLogo()">
+    </div>
+
+    <div class="cs">
+      <label class="cl">Couleur d'accent</label>
+      <div class="swatches" id="accent-sw"></div>
+    </div>
+
+    <div class="cs">
+      <label class="cl">Couleurs du texte</label>
+      <div class="txt-color-row">
+        <span class="txt-color-lbl">TORSORA</span>
+        <input type="color" class="txt-color-inp" id="color-main" oninput="state.colorMain=this.value;renderLogo()">
+        <button class="upper-btn on" id="upper-main" onclick="toggleUpper('main')" title="Majuscules">Aa</button>
+      </div>
+      <div class="txt-color-row">
+        <span class="txt-color-lbl">Sous-nom</span>
+        <input type="color" class="txt-color-inp" id="color-sub" oninput="state.colorSub=this.value;state.linkSubToGrad=false;document.getElementById('btn-link-sub').classList.remove('on');renderLogo()">
+        <button class="link-btn" id="btn-link-sub" onclick="toggleLinkSub()" title="Lier à la couleur droite du dégradé">⛓</button>
+        <button class="upper-btn on" id="upper-sub" onclick="toggleUpper('sub')" title="Majuscules">Aa</button>
+      </div>
+      <div class="txt-color-row">
+        <span class="txt-color-lbl">Tagline</span>
+        <input type="color" class="txt-color-inp" id="color-tag" oninput="state.colorTag=this.value;renderLogo()">
+        <button class="upper-btn" id="upper-tag" onclick="toggleUpper('tag')" title="Majuscules">Aa</button>
+      </div>
+    </div>
+
+    <!-- GRADIENT -->
+    <div class="cs">
+      <label class="cl">Dégradé du symbole</label>
+
+      <!-- Color + stop % for start -->
+      <div class="gs-row">
+        <span class="gs-lbl">Gauche</span>
+        <input type="color" class="gs-color" id="grad-start"
+          oninput="state.gradStart=this.value;renderLogo()">
+        <div class="gs-pct-wrap">
+          <input type="range" min="0" max="100" step="1" id="sl-gStartPct"
+            oninput="state.gradStartPct=+this.value;document.getElementById('val-gStartPct').textContent=this.value+'%';renderLogo()">
+          <span class="gs-pct-val" id="val-gStartPct">0%</span>
+        </div>
+      </div>
+
+      <!-- Color + stop % for end -->
+      <div class="gs-row">
+        <span class="gs-lbl">Droite</span>
+        <input type="color" class="gs-color" id="grad-end"
+          oninput="setGradEnd(this.value)">
+        <div class="gs-pct-wrap">
+          <input type="range" min="0" max="100" step="1" id="sl-gEndPct" value="100"
+            oninput="state.gradEndPct=+this.value;document.getElementById('val-gEndPct').textContent=this.value+'%';renderLogo()">
+          <span class="gs-pct-val" id="val-gEndPct">100%</span>
+        </div>
+      </div>
+
+      <!-- Direction -->
+      <div class="dir-btns" id="dir-btns">
+        <button class="dir-btn on" data-dir="lr" title="Gauche → Droite" onclick="setGradDir('lr')">→</button>
+        <button class="dir-btn" data-dir="rl" title="Droite → Gauche" onclick="setGradDir('rl')">←</button>
+        <button class="dir-btn" data-dir="tb" title="Haut → Bas" onclick="setGradDir('tb')">↓</button>
+        <button class="dir-btn" data-dir="bt" title="Bas → Haut" onclick="setGradDir('bt')">↑</button>
+        <button class="dir-btn" data-dir="diag" title="Diagonal" onclick="setGradDir('diag')">↗</button>
+      </div>
+      <button class="grad-reset" onclick="resetGradient()">Réinitialiser</button>
+    </div>
+
+    <!-- TYPOGRAPHIE -->
+    <div class="cs">
+      <label class="cl">Typographie</label>
+      <div class="slider-group">
+        <div class="slider-label-row"><span>Police titre (TORSORA + Sous-nom)</span></div>
+        <select class="ci" id="sel-fontTitle" onchange="state.fontTitle=this.value;renderLogo()">
+          <option value="Bebas Neue">Bebas Neue</option>
+          <option value="Oswald">Oswald</option>
+          <option value="Barlow Condensed">Barlow Condensed</option>
+          <option value="Anton">Anton</option>
+          <option value="Chakra Petch">Chakra Petch</option>
+        </select>
+      </div>
+      <div class="slider-group" style="margin-top:6px">
+        <div class="slider-label-row"><span>Police tagline</span></div>
+        <select class="ci" id="sel-fontTag" onchange="state.fontTagFamily=this.value;renderLogo()">
+          <option value="Outfit">Outfit</option>
+          <option value="Sora">Sora</option>
+          <option value="Space Grotesk">Space Grotesk</option>
+          <option value="Barlow Condensed">Barlow Condensed</option>
+          <option value="Oswald">Oswald</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- FONT SIZES + WEIGHT + SPACING -->
+    <div class="cs">
+      <label class="cl">TORSORA — Taille / Graisse / Espacement</label>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Taille</span>
+          <span class="slider-val" id="val-fontMain">50</span>
+        </div>
+        <input type="range" id="sl-fontMain" min="20" max="160" step="1" value="50"
+          oninput="state.fontMain=+this.value;document.getElementById('val-fontMain').textContent=this.value;renderLogo()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Graisse</span>
+          <span class="slider-val" id="val-wMain">400</span>
+        </div>
+        <input type="range" id="sl-wMain" min="100" max="900" step="100" value="400"
+          oninput="state.weightMain=+this.value;document.getElementById('val-wMain').textContent=this.value;renderLogo()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Espacement lettres</span>
+          <span class="slider-val" id="val-lsMain">auto</span>
+        </div>
+        <input type="range" id="sl-lsMain" min="-2" max="30" step="0.5" value="-1"
+          oninput="state.lsMain=+this.value;document.getElementById('val-lsMain').textContent=(+this.value===-1?'auto':this.value);renderLogo()">
+      </div>
+    </div>
+
+    <div class="cs">
+      <label class="cl">Sous-nom — Taille / Graisse / Espacement</label>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Taille</span>
+          <span class="slider-val" id="val-fontSub">33</span>
+        </div>
+        <input type="range" id="sl-fontSub" min="12" max="120" step="1" value="33"
+          oninput="state.fontSub=+this.value;document.getElementById('val-fontSub').textContent=this.value;renderLogo()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Graisse</span>
+          <span class="slider-val" id="val-wSub">400</span>
+        </div>
+        <input type="range" id="sl-wSub" min="100" max="900" step="100" value="400"
+          oninput="state.weightSub=+this.value;document.getElementById('val-wSub').textContent=this.value;renderLogo()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Espacement lettres</span>
+          <span class="slider-val" id="val-lsSub">auto</span>
+        </div>
+        <input type="range" id="sl-lsSub" min="-2" max="20" step="0.5" value="-1"
+          oninput="state.lsSub=+this.value;document.getElementById('val-lsSub').textContent=(+this.value===-1?'auto':this.value);renderLogo()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Taille carré ■</span>
+          <span class="slider-val" id="val-sqSize">auto</span>
+        </div>
+        <input type="range" id="sl-sqSize" min="2" max="40" step="1" value="2"
+          oninput="state.sqSizeOverride=(+this.value<=2?-1:+this.value);document.getElementById('val-sqSize').textContent=(+this.value<=2?'auto':this.value);renderLogo()">
+      </div>
+    </div>
+
+    <div class="cs">
+      <label class="cl">Tagline — Taille / Graisse / Espacement</label>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Taille</span>
+          <span class="slider-val" id="val-fontTag">11</span>
+        </div>
+        <input type="range" id="sl-fontTag" min="6" max="30" step="1" value="11"
+          oninput="state.fontTag=+this.value;document.getElementById('val-fontTag').textContent=this.value;renderLogo()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Graisse</span>
+          <span class="slider-val" id="val-wTag">300</span>
+        </div>
+        <input type="range" id="sl-wTag" min="100" max="900" step="100" value="300"
+          oninput="state.weightTag=+this.value;document.getElementById('val-wTag').textContent=this.value;renderLogo()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Espacement lettres</span>
+          <span class="slider-val" id="val-lsTag">0.3</span>
+        </div>
+        <input type="range" id="sl-lsTag" min="-1" max="10" step="0.1" value="0.3"
+          oninput="state.lsTag=+this.value;document.getElementById('val-lsTag').textContent=this.value.toString().substring(0,4);renderLogo()">
+      </div>
+    </div>
+
+    <!-- POSITIONING -->
+    <div class="cs">
+      <label class="cl">Positionnement</label>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Gap ADN / Texte</span>
+          <span class="slider-val" id="val-gap">26</span>
+        </div>
+        <input type="range" id="sl-gap" min="4" max="80" step="1" value="26"
+          oninput="state.offsetGap=+this.value;document.getElementById('val-gap').textContent=this.value;renderLogo()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>TORSORA — Y</span>
+          <span class="slider-val" id="val-offTY">0</span>
+        </div>
+        <input type="range" id="sl-offTY" min="-60" max="60" step="1" value="0"
+          oninput="state.offsetTorsoraY=+this.value;document.getElementById('val-offTY').textContent=this.value;renderLogo()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Sous-nom — X</span>
+          <span class="slider-val" id="val-offSX">0</span>
+        </div>
+        <input type="range" id="sl-offSX" min="-100" max="200" step="1" value="0"
+          oninput="state.offsetSubX=+this.value;document.getElementById('val-offSX').textContent=this.value;renderLogo()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Sous-nom — Y</span>
+          <span class="slider-val" id="val-offSY">0</span>
+        </div>
+        <input type="range" id="sl-offSY" min="-60" max="60" step="1" value="0"
+          oninput="state.offsetSubY=+this.value;document.getElementById('val-offSY').textContent=this.value;renderLogo()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Tagline — X</span>
+          <span class="slider-val" id="val-offTagX">0</span>
+        </div>
+        <input type="range" id="sl-offTagX" min="-100" max="200" step="1" value="0"
+          oninput="state.offsetTagX=+this.value;document.getElementById('val-offTagX').textContent=this.value;renderLogo()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Tagline — Y</span>
+          <span class="slider-val" id="val-offTagY">0</span>
+        </div>
+        <input type="range" id="sl-offTagY" min="-60" max="60" step="1" value="0"
+          oninput="state.offsetTagY=+this.value;document.getElementById('val-offTagY').textContent=this.value;renderLogo()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Carré — offset X</span>
+          <span class="slider-val" id="val-offSqX">0</span>
+        </div>
+        <input type="range" id="sl-offSqX" min="-30" max="30" step="1" value="0"
+          oninput="state.offsetSquareX=+this.value;document.getElementById('val-offSqX').textContent=this.value;renderLogo()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label-row">
+          <span>Carré — offset Y</span>
+          <span class="slider-val" id="val-offSqY">0</span>
+        </div>
+        <input type="range" id="sl-offSqY" min="-20" max="20" step="1" value="0"
+          oninput="state.offsetSquareY=+this.value;document.getElementById('val-offSqY').textContent=this.value;renderLogo()">
+      </div>
+    </div>
+
+    <!-- EXPORT SIZE -->
+    <div class="cs">
+      <label class="cl">Taille d'export</label>
+      <div class="size-row">
+        <button class="sz-btn" onclick="setSize('sm',this)">SM<small>480px</small></button>
+        <button class="sz-btn on" onclick="setSize('md',this)">MD<small>800px</small></button>
+        <button class="sz-btn" onclick="setSize('lg',this)">LG<small>1200px</small></button>
+      </div>
+    </div>
+
+    <!-- CONFIGURATION SAVE/LOAD -->
+    <div class="cs">
+      <label class="cl">Configuration</label>
+      <div class="cfg-btns">
+        <button class="btn-cfg btn-cfg-save" onclick="saveConfig()">⬇ Sauvegarder config</button>
+        <label class="btn-cfg btn-cfg-load">
+          ⬆ Importer config
+          <input type="file" accept=".json" style="display:none" onchange="loadConfig(this)">
+        </label>
+        <button class="btn-cfg btn-cfg-reset" onclick="resetAllOffsets()">↺ Reset positions</button>
+      </div>
+    </div>
+
+    <!-- EXPORT -->
+    <div class="export-sec">
+      <div class="export-ttl">Logo complet</div>
+      <button class="btn-exp btn-gen" onclick="flashAndGenerate()">Générer SVG</button>
+      <button class="btn-exp btn-dl" onclick="downloadSVG()">Télécharger SVG</button>
+      <button class="btn-exp btn-png" onclick="downloadPNG()">Télécharger PNG</button>
+      <div class="export-ttl" style="margin-top:10px">Icône ADN (carré)</div>
+      <div class="size-row" style="margin-bottom:8px">
+        <button class="sz-btn" onclick="setIconSize(128,this)">128</button>
+        <button class="sz-btn on" onclick="setIconSize(512,this)">512</button>
+        <button class="sz-btn" onclick="setIconSize(1024,this)">1024</button>
+      </div>
+      <button class="btn-exp btn-icon-svg" onclick="downloadDNASVG()">Icône SVG</button>
+      <button class="btn-exp btn-icon-png" onclick="downloadDNAPNG()">Icône PNG</button>
+    </div>
+
+  </aside>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// DATA
+// ════════════════════════════════════════════════════════════
+
+const PRESETS = [
+  { id:'main',     label:'TORSORA',          sub:'',          tag:'AGENCE DÉVELOPPEURS + PUISSANCE IA',        accent:'#7C3AED', isMain:true,  txt:'dark', gradStart:'#1D4ED8', gradEnd:'#8B21E8', gradStartPct:0, gradEndPct:100, gradDir:'lr' },
+  { id:'studio',   label:'TORSORA STUDIO',   sub:'STUDIO',    tag:'Solutions Créatives par TORSORA',           accent:'#06B6D4', isMain:false, txt:'dark', gradStart:'#070b14', gradEnd:'#06B6D4', gradStartPct:0, gradEndPct:100, gradDir:'lr' },
+  { id:'training', label:'TORSORA TRAINING', sub:'TRAINING',  tag:'Super-pouvoirs de Développeur par TORSORA', accent:'#F97316', isMain:false, txt:'dark', gradStart:'#070b14', gradEnd:'#F97316', gradStartPct:0, gradEndPct:100, gradDir:'lr' },
+  { id:'lab',      label:'TORSORA LAB',      sub:'LAB',       tag:'Recherche IA & innovation par TORSORA',     accent:'#8B5CF6', isMain:false, txt:'dark', gradStart:'#070b14', gradEnd:'#8B5CF6', gradStartPct:0, gradEndPct:100, gradDir:'lr' },
+  { id:'dev',      label:'TORSORA DEV',      sub:'DEV',       tag:'Ingénierie Experte & Code par TORSORA',     accent:'#3B82F6', isMain:false, txt:'dark', gradStart:'#070b14', gradEnd:'#3B82F6', gradStartPct:0, gradEndPct:100, gradDir:'lr' },
+  { id:'crm',      label:'TORSORA CRM',      sub:'CRM',       tag:'Outils Commerciaux Structurés par TORSORA', accent:'#1D4ED8', isMain:false, txt:'dark', gradStart:'#070b14', gradEnd:'#1D4ED8', gradStartPct:0, gradEndPct:100, gradDir:'lr' },
+  { id:'groupe',   label:'TORSORA GROUPE',   sub:'GROUPE',    tag:'Écosystème Technologique Intégré',          accent:'#1E3A5F', isMain:false, txt:'dark', gradStart:'#070b14', gradEnd:'#1E3A5F', gradStartPct:0, gradEndPct:100, gradDir:'lr' },
+];
+
+const SWATCH_COLORS = [
+  { hex:'#06B6D4', name:'Turquoise' },
+  { hex:'#F97316', name:'Orange' },
+  { hex:'#8B5CF6', name:'Violet' },
+  { hex:'#3B82F6', name:'Steel Blue' },
+  { hex:'#1D4ED8', name:'Royal Blue' },
+];
+
+const DEFAULT_STATE = {
+  pi: 4,
+  subName: 'DEV',
+  tagline: 'Ingénierie Experte & Code par TORSORA',
+  accent: '#3B82F6',
+  colorMain: '#1a2338',
+  colorSub: '#3B82F6',
+  colorTag: '#6b7a9a',
+  upperMain: true,
+  upperSub: true,
+  upperTag: false,
+  linkSubToGrad: false,
+  symType: 'logo1',
+  gradStart: '#070b14',
+  gradEnd: '#3B82F6',
+  gradStartPct: 0,
+  gradEndPct: 100,
+  gradDir: 'lr',
+  fontMain: 50,
+  fontSub: 33,
+  fontTag: 11,
+  fontTitle: 'Bebas Neue',
+  fontTagFamily: 'Outfit',
+  weightMain: 400,
+  weightSub: 400,
+  weightTag: 300,
+  lsMain: -1,
+  lsSub: -1,
+  lsTag: 0.3,
+  sqSizeOverride: -1,   // -1 = auto (28% of fontSub)
+  isMain: false,
+  bg: 'white',
+  exportSize: 'md',
+  iconSize: 512,
+  // Positionnement
+  offsetGap: 26,
+  offsetTorsoraY: 0,
+  offsetSubX: 0,
+  offsetSubY: 0,
+  offsetTagX: 0,
+  offsetTagY: 0,
+  offsetSquareX: 0,
+  offsetSquareY: 0,
+};
+
+const state = Object.assign({}, DEFAULT_STATE);
+
+// ════════════════════════════════════════════════════════════
+// DNA PATH DATA — Logo 1 (viewBox 0 0 256 397.38)
+// transform="translate(-1147.76 -893.69)"
+// ════════════════════════════════════════════════════════════
+
+const DNA_TX = -1147.76, DNA_TY = -893.69, DNA_VW = 256, DNA_VH = 397.38;
+
+const DNA_PATH_DATA = [
+  "M1155.27,921.29c0-3.52-.14-7,0-10.55a18.24,18.24,0,0,1,5.29-12,15.67,15.67,0,0,1,23.68.78,21.51,21.51,0,0,1,4.93,11.26c.24,1.9.24,3.83.3,5.75a161.46,161.46,0,0,0,3.66,29.46c1.5,6.87,2.86,13.77,5,20.49,5.86,18.53,15.45,35,27,50.48a179,179,0,0,0,17.08,19.44c11.81,11.74,24.18,22.82,37,33.39q18.9,15.54,37.51,31.41a239.11,239.11,0,0,1,39.74,42.76c11.26,15.69,20.46,32.43,26.71,50.74,4,11.81,6.8,24,9.32,36.16,1.89,9.13,2.21,18.4,3.26,27.6.66,5.71.65,11.5-1.36,17.08a21.46,21.46,0,0,1-4.32,7.38c-4.82,5.3-14.19,5.51-19.24,1.23a18.79,18.79,0,0,1-6.54-10.3,56.27,56.27,0,0,1-1.22-12.38c-.11-13.53-2.47-26.72-6-39.7a173.25,173.25,0,0,0-19-43.87c-6.67-11-15.08-20.66-24.09-29.75-5.18-5.22-10.66-10.15-16.18-15q-21.29-18.64-43.61-36.07a387.66,387.66,0,0,1-37.19-33.2,239.08,239.08,0,0,1-37.84-50.54c-7.1-12.61-11.76-26.22-15.91-40a178.14,178.14,0,0,1-5.74-27.19C1156.47,937.88,1155.11,929.65,1155.27,921.29Z",
+  "M1162.12,1091.09c.16-4.15.25-8.3.53-12.44a5.28,5.28,0,0,1,2.28-4.06c5.26-3.61,10.54-7.21,15.88-10.72a4.24,4.24,0,0,1,4.58-.27c5.91,3.79,11.74,7.7,17.54,11.65a4.93,4.93,0,0,1,2,4.19c.06,7,.12,14.06.07,21.09a6.91,6.91,0,0,1-.84,3.69c-1.78,2.66-.73,4.84.69,7.07,1.9,3,3.79,5.91,5.74,8.84a2.63,2.63,0,0,0,4.13.23c1.85-1.76,3.6-3.63,5.47-5.37q6.32-5.88,12.71-11.67a6.75,6.75,0,0,1,2.38-1.55,4.35,4.35,0,0,1,2.74.06,13.49,13.49,0,0,1,3.18,2.1q10.72,8.85,21.39,17.77c1.81,1.51,1.82,3.23,0,4.83-4.53,4-9.16,8-13.65,12.06a186.24,186.24,0,0,0-35.81,43.53,162.44,162.44,0,0,0-17.06,41.55,83.05,83.05,0,0,0-1.62,8.46,4.11,4.11,0,0,0,1.2,3.5,33,33,0,0,1,2.74,2.67,8.62,8.62,0,0,1,2.06,5.27c0,8.63.12,17.26.11,25.9a8.69,8.69,0,0,1-3.9,7.33q-9.4,6.62-18.94,13a6,6,0,0,1-7.2.09c-6.35-4.29-12.71-8.57-19-13a8.64,8.64,0,0,1-3.76-7.39c0-8.63,0-17.26,0-25.89a8.18,8.18,0,0,1,3.42-6.58c2-1.56,4.23-2.88,6.17-4.52a7.47,7.47,0,0,0,2.07-3.1,34.41,34.41,0,0,0,1.36-5.58,216.45,216.45,0,0,1,8.75-32.35c5.5-16.16,13.64-31,23.44-44.89,1.47-2.09,3-4.15,4.48-6.23,5.55-7.72,5.66-6.26.39-15q-2.48-4.1-5-8.15a3,3,0,0,0-3.36-1c-1.15.55-2.23,1.24-3.39,1.77a5.37,5.37,0,0,1-5.47-.42c-5.05-3.37-10.05-6.81-15.07-10.24a6.74,6.74,0,0,1-3-5.7c-.06-3.51,0-7,0-10.55Z",
+  "M1351.2,1073.45a62.6,62.6,0,0,0-7.77-13.35,3.17,3.17,0,0,0-4.26-.63c-2.12,1.94-4.18,3.94-6.26,5.93-4.61,4.43-9.19,8.9-13.84,13.28a4,4,0,0,1-5.28.31c-.79-.54-1.59-1.08-2.35-1.67-6.77-5.35-13.55-10.69-20.28-16.09a27.75,27.75,0,0,1-2.77-3c1.48-1.56,2.69-3,4.07-4.26,5.67-5.17,11.41-10.28,17.1-15.43a122,122,0,0,0,16.75-18.42c2.26-3.1,4.56-6.17,6.83-9.27A159.89,159.89,0,0,0,1358,958.29a43.84,43.84,0,0,0,1.07-4.67c.43-2.65,0-5.08-2.16-7-2.84-2.52-3.73-5.75-3.69-9.48.09-7.68,0-15.35-.07-23a8.28,8.28,0,0,1,3.76-7.34c5.54-3.78,11.11-7.54,16.73-11.2a7.91,7.91,0,0,1,9.07-.07c5.63,3.65,11.13,7.5,16.65,11.32a9.51,9.51,0,0,1,4.31,8.14c.06,7.68,0,15.35.06,23,0,.32,0,.64,0,1a9.75,9.75,0,0,1-3.35,6.68,8.43,8.43,0,0,1-1.47,1.22c-5.41,2.83-7.08,7.92-8.11,13.38a204.31,204.31,0,0,1-7.72,27.68,163.44,163.44,0,0,1-22.16,43.4c-2.8,3.89-5.56,7.82-8.48,11.62-2.08,2.69-2,5.2-.19,7.94,2.25,3.49,4.41,7,6.53,10.61,1.8,3,4,4.9,7.85,3.8a7.59,7.59,0,0,1,6.41,1.19c4.26,2.82,8.52,5.66,12.74,8.55a6.68,6.68,0,0,1,3,5.73q.07,10.08.09,20.15a6.71,6.71,0,0,1-2.75,5.84c-5,3.51-10,7-15,10.36a3.23,3.23,0,0,1-3.64.06q-8-5.22-16-10.61a6,6,0,0,1-2.37-4,86.49,86.49,0,0,1-1-20.07,17.34,17.34,0,0,1,1.23-4.6C1349.87,1076.37,1350.56,1075,1351.2,1073.45Z",
+  "M1278.94,1248.12c15.34,0,30.68-.1,46,.06,6.38.06,12.76.62,19.13,1.08a4.4,4.4,0,0,1,4.2,4.44,62.19,62.19,0,0,1,.12,6.69,4.22,4.22,0,0,1-3.61,3.9c-2.53.38-5.06.72-7.61.91s-5.11.24-7.66.25q-52.26.33-104.52.59c-13.3.06-11.81,1.07-11.84-11.74,0-1.27.12-2.55.22-3.82a3.19,3.19,0,0,1,3.22-2.88c2.88-.08,5.75-.1,8.63-.1h53.7Z",
+  "M1270.32,919.23q28.29,0,56.58,0c2.87,0,5.73.26,8.59.47a3.62,3.62,0,0,1,2.6,2.55,23.35,23.35,0,0,1-.09,10.42,3.24,3.24,0,0,1-2.74,2.4,67,67,0,0,1-7.63.4q-36.93.28-73.86.52c-13.75.1-27.49.26-41.24.37-2.23,0-4.47-.08-6.7-.17a3,3,0,0,1-2.66-2.3c-.1-.63-.29-1.25-.33-1.88-.18-3.51-.38-7-.46-10.54a3.57,3.57,0,0,1,3.69-3.58c3.51-.07,7-.1,10.54,0q26.87.45,53.71,1Z",
+  "M1275.12,987.27l-45,.46c-2.24,0-4.47-.05-6.71,0a4.84,4.84,0,0,1-4.58-2.89c-1.89-3.68-3.73-7.41-5.43-11.19-1.18-2.62,0-4.33,2.8-4.4,2.23-.06,4.47-.06,6.7,0l104.44.55c1.91,0,3.83,0,5.74.06a27,27,0,0,1,2.85.31,3,3,0,0,1,2.4,3.49,45.68,45.68,0,0,1-4.83,10.39,6,6,0,0,1-4.71,2.91c-2.54.19-5.1.21-7.65.21q-23,0-46,0Z",
+  "M1219.68,1196.42c1.88-.14,3.77-.44,5.66-.4,11.51.2,23,.57,34.53.72,16.31.23,32.61.32,48.92.47,6.72.06,13.43.11,20.15.2a6.22,6.22,0,0,1,6,4c1.16,2.63,2.33,5.25,3.4,7.92a3.1,3.1,0,0,1-2.77,4.09c-1.59.14-3.18.24-4.78.25q-55.15.35-110.33.67c-1.91,0-3.82-.14-5.73-.26a2.24,2.24,0,0,1-1.76-2.83C1214.41,1206.07,1216.23,1201,1219.68,1196.42Z",
+  "M1275.75,1162.67c-7,0-14.07,0-21.1,0-2.55,0-5.1-.11-7.65-.18a1.12,1.12,0,0,1-1.16-1.26,1.32,1.32,0,0,1,.2-.88c4.55-4.46,9.11-8.92,13.71-13.32a6.18,6.18,0,0,1,4.42-1.59q12,.08,24,.25a6.88,6.88,0,0,1,4.35,1.77,102.56,102.56,0,0,1,13,12.64,1.38,1.38,0,0,1,.22.88,1.08,1.08,0,0,1-1.24,1.18h-28.76Z",
+  "M1275.63,1021.32c8.89,0,17.78,0,26.67,0a2,2,0,0,1,1.53.77,1.82,1.82,0,0,1,0,1.71q-6.21,6.58-12.56,13a8,8,0,0,1-6,2.38c-6,0-12.07.09-18.1.13a6,6,0,0,1-4.39-1.53c-5-4.84-10-9.74-14.9-14.64-.17-.17-.16-.58-.15-.88a1.11,1.11,0,0,1,1.23-1.18l21.9-.08h4.76Z",
+];
+
+// ════════════════════════════════════════════════════════════
+// LOGO 2 PATH DATA — viewBox 0 0 134.42 236.81
+// transform="translate(-1208.95 -973.53)"
+// ════════════════════════════════════════════════════════════
+
+const LOGO2_VW = 134.42, LOGO2_VH = 236.81, LOGO2_TX = -1208.95, LOGO2_TY = -973.53;
+const LOGO2_PATH_DATA = [
+  "M1317.29,1094.79a22.45,22.45,0,0,1-7.09,16.46,76.3,76.3,0,0,1-5.81,5c-2.9,2.24-4,2.3-6.86.37-3.7-2.51-7.33-5.12-11-7.73a2,2,0,0,1,.11-3.24c1.53-1.16,3.13-2.22,4.63-3.41a53.67,53.67,0,0,0,4.35-3.75c3.48-3.42,3.49-7.47-.2-10.88a75.45,75.45,0,0,0-8.22-6.58c-6-4.19-12.24-8.14-18.31-12.27-5.55-3.78-11.12-7.53-16.5-11.53a112.69,112.69,0,0,1-25.2-26.09,79,79,0,0,1-14.32-43,33.84,33.84,0,0,1,.42-6.67c.64-4,4.44-7.37,8.6-7.86,2.8-.32,6.62,1.9,7.85,4.56a25.76,25.76,0,0,1,2,8.35,79,79,0,0,0,1.2,9.5,67.65,67.65,0,0,0,18.65,34,119.35,119.35,0,0,0,15.55,12.74q13.35,9.35,26.67,18.72a115.23,115.23,0,0,1,16.17,13.49C1315.23,1080.22,1317.36,1086.7,1317.29,1094.79Z",
+  "M1234.8,1091.91a22.64,22.64,0,0,1,4.92-14.23,44.34,44.34,0,0,1,6-6.22c7.07-6,6.47-5.77,13.71-.53,2.84,2,5.64,4.17,8.37,6.35a1.73,1.73,0,0,1,.11,1.69c-1.67,1.48-3.5,2.77-5.2,4.2-2.2,1.85-4.42,3.67-6.44,5.7a5.36,5.36,0,0,0-.16,7.05,45.72,45.72,0,0,0,6.29,5.85c5.17,3.75,10.52,7.26,15.82,10.84,5.83,3.93,11.71,7.78,17.52,11.74a116.52,116.52,0,0,1,20.12,17.7c14,15.22,21.09,33.31,22.36,53.79a31.12,31.12,0,0,1-.38,6.68c-.55,3.5-2.79,5.64-6.15,6.62-2.78.82-6.45-.59-8.46-3.2a10.5,10.5,0,0,1-2.09-5.27c-.46-3.81-.9-7.62-1.59-11.39a64,64,0,0,0-16.78-32.82,97.58,97.58,0,0,0-16.08-13.59q-16.25-11.07-32.51-22.12a61.64,61.64,0,0,1-12.46-10.43A26.38,26.38,0,0,1,1234.8,1091.91Z",
+  "M1252.57,1128.67a125.23,125.23,0,0,1,14.13,9.16c2,1.46,1.88,2.84-.25,4.54-4,3.19-8,6.31-11.93,9.59-8.26,7-13.68,15.91-18,25.65a12.53,12.53,0,0,0-.63,5.64c.16,5.41.19,10.84.23,16.26a4.77,4.77,0,0,1-2.13,4.07q-4.73,3.26-9.57,6.32a3.88,3.88,0,0,1-3.68-.06,14.74,14.74,0,0,1-2.48-1.45c-10.17-6.84-9.12-4.75-9.33-16.71,0-1.59,0-3.19,0-4.79a7.07,7.07,0,0,1,2.63-5.88c1-.79,2-1.64,3-2.41a9.29,9.29,0,0,0,3.24-4.63c.1-.3.28-.58.38-.88,4.69-13.95,13.09-25.45,23.43-35.69A53.47,53.47,0,0,1,1252.57,1128.67Z",
+  "M1299.83,1055.87a80.6,80.6,0,0,1-14.79-9.79,1.77,1.77,0,0,1,0-1.7c1.63-1.5,3.35-2.91,5.12-4.24a88,88,0,0,0,22.5-24.55c1-1.63,1.9-3.32,2.78-5a18,18,0,0,0,2-10.13c-.44-5.07-.33-10.2-.34-15.3a5.81,5.81,0,0,1,2.66-4.85c10.49-7.42,10.23-7.65,20.7,0a6.67,6.67,0,0,1,2.94,5.71c0,3.82,0,7.65,0,11.48a6.4,6.4,0,0,1-2.58,4.92,32,32,0,0,0-3.72,3,20,20,0,0,0-3.13,4.71c-.94,2-1.45,4.22-2.21,6.32a81.17,81.17,0,0,1-26.45,36.82C1303.74,1054.45,1302.29,1055.71,1299.83,1055.87Z",
+  "M1275.67,1184.61c8.95,0,17.9,0,26.85,0a37.58,37.58,0,0,1,5.71.46,3.1,3.1,0,0,1,2.53,2.55,13.71,13.71,0,0,1,.35,2.85c0,1.7-1.19,3.4-2.62,3.53-2.86.25-5.73.52-8.59.55q-24.45.21-48.9.32c-1.6,0-3.2,0-4.79-.09a3.26,3.26,0,0,1-3.12-3,28.93,28.93,0,0,1,.2-4.74,3.14,3.14,0,0,1,2.67-2.36c2.23-.08,4.47-.16,6.7-.17,7.67,0,15.34,0,23,0Z",
+  "M1273.64,999.45q-13.38,0-26.77,0c-1.27,0-2.54-.16-3.8-.27a3,3,0,0,1-2.58-2.41,46.35,46.35,0,0,1-.29-4.72,2.21,2.21,0,0,1,1.71-2,11.34,11.34,0,0,1,3.75-.56q28.21.2,56.41.48c.64,0,1.27.07,1.91.12,3.61.29,4.94,2,4.38,5.77a3.44,3.44,0,0,1-3.18,3c-3.5.14-7,.27-10.51.3-7,0-14,0-21,0Z",
+  "M1274.92,1167.74c-7,0-14.06,0-21.09,0a1.74,1.74,0,0,1-1.37-2.67q2.51-2.9,5.24-5.6a6,6,0,0,1,4.3-1.81c9.27.06,18.54.07,27.81.29a8.24,8.24,0,0,1,4.36,1.67,34.87,34.87,0,0,1,4.7,4.71,2.11,2.11,0,0,1,.36,1.75,2,2,0,0,1-1.33,1.18c-3.17.22-6.36.36-9.55.41-4.47.06-8.95,0-13.43,0Z",
+  "M1276.56,1027.12c-3.82,0-7.64-.14-11.45,0a12.54,12.54,0,0,1-10.82-4.93,18,18,0,0,1-2.13-3.08c-.16-.32.26-1.21.66-1.48a3.35,3.35,0,0,1,1.83-.36q20.05-.07,40.1-.07a22.62,22.62,0,0,1,4.7.57c.29.06.69,1.16.52,1.6-1.18,3.11-3.6,5.2-6.37,6.81a7.84,7.84,0,0,1-3.67.81c-4.46.09-8.91,0-13.37,0Z",
+];
+
+// ════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function getSymData(symType) {
+  if (symType === 'logo2') return { paths: LOGO2_PATH_DATA, vw: LOGO2_VW, vh: LOGO2_VH, tx: LOGO2_TX, ty: LOGO2_TY };
+  return { paths: DNA_PATH_DATA, vw: DNA_VW, vh: DNA_VH, tx: DNA_TX, ty: DNA_TY };
+}
+
+function gradCoords(dir, vw, vh) {
+  switch (dir) {
+    case 'lr':   return { x1: 0,    y1: vh/2, x2: vw,   y2: vh/2 };
+    case 'rl':   return { x1: vw,   y1: vh/2, x2: 0,    y2: vh/2 };
+    case 'tb':   return { x1: vw/2, y1: 0,    x2: vw/2, y2: vh   };
+    case 'bt':   return { x1: vw/2, y1: vh,   x2: vw/2, y2: 0    };
+    case 'diag': return { x1: 0,    y1: 0,    x2: vw,   y2: vh   };
+    default:     return { x1: 0,    y1: vh/2, x2: vw,   y2: vh/2 };
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// DNA SVG — mask + gradient
+// ════════════════════════════════════════════════════════════
+
+function dnaSVGContent(gradId, symType, gradStart, gradEnd, gradDir, gradStartPct, gradEndPct) {
+  const { paths, vw, vh, tx, ty } = getSymData(symType);
+  const maskId = gradId + '_mask';
+  const gc = gradCoords(gradDir, vw, vh);
+  const sp = (gradStartPct === undefined) ? 0 : gradStartPct;
+  const ep = (gradEndPct   === undefined) ? 100 : gradEndPct;
+  const maskPaths = paths.map(d => `<path d="${d}" fill="white"/>`).join('\n      ');
+
+  return `
+  <defs>
+    <linearGradient id="${gradId}" x1="${gc.x1}" y1="${gc.y1}" x2="${gc.x2}" y2="${gc.y2}" gradientUnits="userSpaceOnUse">
+      <stop offset="${sp}%"  stop-color="${gradStart}"/>
+      <stop offset="${ep}%" stop-color="${gradEnd}"/>
+    </linearGradient>
+    <mask id="${maskId}">
+      <rect width="${vw}" height="${vh}" fill="black"/>
+      <g transform="translate(${tx},${ty})">
+        ${maskPaths}
+      </g>
+    </mask>
+  </defs>
+  <rect x="0" y="0" width="${vw}" height="${vh}" fill="url(#${gradId})" mask="url(#${maskId})"/>`;
+}
+
+function dnaSVG(W, H, symType, gradStart, gradEnd, gradDir, gradId, sp, ep) {
+  const { vw, vh } = getSymData(symType);
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${vw} ${vh}" xmlns="http://www.w3.org/2000/svg">${dnaSVGContent(gradId, symType, gradStart, gradEnd, gradDir, sp, ep)}\n</svg>`;
+}
+
+// ════════════════════════════════════════════════════════════
+// FULL LOGO SVG BUILDER
+// ════════════════════════════════════════════════════════════
+
+function logoSVG(cfg) {
+  const {
+    subName, tagline, accent, txtColor, isMain,
+    symType       = 'logo1',
+    gradStart     = '#070b14',
+    gradEnd       = '#3B82F6',
+    gradStartPct  = 0,
+    gradEndPct    = 100,
+    gradDir       = 'lr',
+    fontMain      = 50,
+    fontSub       = 33,
+    fontTag       = 11,
+    fontTitle     = 'Bebas Neue',
+    fontTagFamily = 'Outfit',
+    weightMain    = 400,
+    weightSub     = 400,
+    weightTag     = 300,
+    lsMain        = -1,
+    lsSub         = -1,
+    lsTag         = 0.3,
+    sqSizeOverride = -1,
+    colorMain     = '#1a2338',
+    colorSub      = '#3B82F6',
+    colorTag      = '#6b7a9a',
+    upperMain     = true,
+    upperSub      = true,
+    upperTag      = false,
+    offsetGap     = 26,
+    offsetTorsoraY = 0,
+    offsetSubX    = 0,
+    offsetSubY    = 0,
+    offsetTagX    = 0,
+    offsetTagY    = 0,
+    offsetSquareX = 0,
+    offsetSquareY = 0,
+    forExport     = false,
+  } = cfg;
+
+  const dark = txtColor !== 'light';
+  const { vw, vh } = getSymData(symType);
+
+  const DNA_W = isMain ? 120 : 82;
+  const DNA_H = Math.round(DNA_W * (vh / vw));
+  const GAP   = offsetGap;
+  const TX    = DNA_W + GAP;
+
+  const FS_MAIN = fontMain;
+  const FS_SUB  = fontSub;
+  const FS_TAG  = fontTag;
+
+  const midDNA = DNA_H / 2;
+  let TORSORA_Y, SUB_Y, TAG_Y;
+
+  if (isMain) {
+    const capH   = FS_MAIN * 0.72;
+    const blockH = capH + 10 + FS_SUB * 0.65;
+    TORSORA_Y = Math.round(midDNA - blockH / 2 + capH);
+    SUB_Y     = TORSORA_Y + 12 + Math.round(FS_SUB * 0.65);
+    TAG_Y     = SUB_Y;
+  } else {
+    const capH    = FS_MAIN * 0.72;
+    const subCapH = FS_SUB  * 0.72;
+    const gap12   = Math.round(FS_MAIN * 0.14);
+    const gap23   = Math.round(FS_SUB  * 0.50);
+    const blockH  = capH + gap12 + subCapH + gap23 + FS_TAG;
+    TORSORA_Y = Math.round(midDNA - blockH / 2 + capH);
+    SUB_Y     = TORSORA_Y + gap12 + Math.round(subCapH);
+    TAG_Y     = SUB_Y + gap23;
+  }
+
+  // Apply position offsets
+  TORSORA_Y += offsetTorsoraY;
+  SUB_Y     += offsetSubY;
+  TAG_Y     += offsetTagY;
+
+  const SVG_H = Math.max(DNA_H + 10, TAG_Y + FS_TAG + 10);
+
+  // Width estimation
+  const lsMainPx  = lsMain >= 0 ? lsMain : FS_MAIN * 0.06;
+  const torsoraW  = 7 * (FS_MAIN * 0.55 + lsMainPx);
+  const subW     = isMain
+    ? tagline.length * (FS_SUB * 0.52)
+    : subName.length * (FS_SUB * 0.55 + FS_SUB * 0.06) + FS_SUB * 0.5; // +space for square
+  const tagW  = tagline.length * (FS_TAG * 0.52);
+  const SVG_W = TX + Math.max(torsoraW, subW, tagW) + 20;
+
+  // Letter-spacing: -1 = "auto" (no attribute set)
+  const lsMainAttr = lsMain === -1 ? '' : `letter-spacing="${lsMain}"`;
+  const lsSubAttr  = lsSub  === -1 ? '' : `letter-spacing="${lsSub}"`;
+  const lsTagAttr  = `letter-spacing="${lsTag}"`;
+
+  // Text content with uppercase
+  const mainText = upperMain ? 'TORSORA' : 'Torsora';
+  const subText  = upperSub  ? (subName  || '').toUpperCase() : (subName  || '');
+  const tagText  = upperTag  ? (tagline  || '').toUpperCase() : (tagline  || '');
+
+  // Square sizing
+  const sqSize = sqSizeOverride >= 2 ? sqSizeOverride : Math.round(FS_SUB * 0.28);
+  const sqDy = -(FS_SUB * 0.36 - sqSize * 0.38 + offsetSquareY);
+  const sqDx = 5 + offsetSquareX;
+
+  const gradId = 'dG';
+
+  const fontImport = forExport
+    ? `<style>@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=Oswald:wght@300;400;500;600;700&amp;family=Barlow+Condensed:wght@300;400;500;600;700;800;900&amp;family=Anton&amp;family=Chakra+Petch:wght@300;400;500;600;700&amp;family=Outfit:wght@300;400;500;600&amp;family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Sora:wght@100;200;300;400;500;600&amp;display=swap');</style>`
+    : '';
+
+  let lines = [];
+  lines.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${SVG_W}" height="${SVG_H}" viewBox="0 0 ${SVG_W} ${SVG_H}">`);
+  if (fontImport) lines.push(fontImport);
+
+  // DNA symbol
+  lines.push(`  <svg x="0" y="0" width="${DNA_W}" height="${DNA_H}" viewBox="0 0 ${vw} ${vh}">`);
+  lines.push(dnaSVGContent(gradId, symType, gradStart, gradEnd, gradDir, gradStartPct, gradEndPct));
+  lines.push(`  </svg>`);
+
+  // TORSORA
+  lines.push(`  <text x="${TX}" y="${TORSORA_Y}"
+    font-family="'${fontTitle}', 'Arial Black', sans-serif"
+    font-weight="${weightMain}" font-size="${FS_MAIN}"
+    fill="${colorMain}" ${lsMainAttr}>${mainText}</text>`);
+
+  if (isMain) {
+    lines.push(`  <text x="${TX + offsetSubX}" y="${SUB_Y}"
+      font-family="'${fontTagFamily}', Arial, sans-serif"
+      font-weight="${weightTag}" font-size="${FS_SUB}"
+      fill="${colorTag}" ${lsTagAttr}>${esc(tagText)}</text>`);
+  } else {
+    lines.push(`  <text x="${TX + offsetSubX}" y="${SUB_Y}"
+      font-family="'${fontTitle}', 'Arial Black', sans-serif"
+      font-weight="${weightSub}" font-size="${FS_SUB}"
+      fill="${colorSub}" ${lsSubAttr}>${esc(subText)}<tspan
+        dx="${sqDx}" dy="${sqDy.toFixed(1)}"
+        font-family="Arial, sans-serif"
+        font-size="${sqSize}"
+        fill="${colorSub}">&#x25A0;</tspan></text>`);
+    lines.push(`  <text x="${TX + offsetTagX}" y="${TAG_Y}"
+      font-family="'${fontTagFamily}', Arial, sans-serif"
+      font-weight="${weightTag}" font-size="${FS_TAG}"
+      fill="${colorTag}" ${lsTagAttr}>${esc(tagText)}</text>`);
+  }
+
+  lines.push(`</svg>`);
+  return lines.join('\n');
+}
+
+// ════════════════════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════════════════════
+
+function renderLogo() {
+  pushUndo();
+  const svg = logoSVG({
+    subName:        state.subName,
+    tagline:        state.tagline,
+    accent:         state.accent,
+    txtColor:       state.txtColor,
+    isMain:         state.isMain,
+    symType:        state.symType,
+    gradStart:      state.gradStart,
+    gradEnd:        state.gradEnd,
+    gradStartPct:   state.gradStartPct,
+    gradEndPct:     state.gradEndPct,
+    gradDir:        state.gradDir,
+    fontMain:       state.fontMain,
+    fontSub:        state.fontSub,
+    fontTag:        state.fontTag,
+    fontTitle:      state.fontTitle,
+    fontTagFamily:  state.fontTagFamily,
+    weightMain:     state.weightMain,
+    weightSub:      state.weightSub,
+    weightTag:      state.weightTag,
+    lsMain:         state.lsMain,
+    lsSub:          state.lsSub,
+    lsTag:          state.lsTag,
+    sqSizeOverride: state.sqSizeOverride,
+    colorMain:      state.colorMain,
+    colorSub:       state.colorSub,
+    colorTag:       state.colorTag,
+    upperMain:      state.upperMain,
+    upperSub:       state.upperSub,
+    upperTag:       state.upperTag,
+    offsetGap:      state.offsetGap,
+    offsetTorsoraY: state.offsetTorsoraY,
+    offsetSubX:     state.offsetSubX,
+    offsetSubY:     state.offsetSubY,
+    offsetTagX:     state.offsetTagX,
+    offsetTagY:     state.offsetTagY,
+    offsetSquareX:  state.offsetSquareX,
+    offsetSquareY:  state.offsetSquareY,
+  });
+  document.getElementById('preview-container').innerHTML = svg;
+  syncActivePresetThumb();
+  saveToLocalStorage();
+}
+
+function syncActivePresetThumb() {
+  const p = PRESETS[state.pi];
+  if (!p) return;
+  // Keep preset gradient in sync with state
+  p.gradStart    = state.gradStart;
+  p.gradEnd      = state.gradEnd;
+  p.gradStartPct = state.gradStartPct;
+  p.gradEndPct   = state.gradEndPct;
+  p.gradDir      = state.gradDir;
+  // Update only the active thumbnail SVG — no full rebuild
+  const items = document.querySelectorAll('.preset-item');
+  const item  = items[state.pi];
+  if (!item) return;
+  const icon = item.querySelector('.preset-icon');
+  if (!icon) return;
+  const miniH = Math.round(28 * DNA_VH / DNA_VW);
+  icon.innerHTML = dnaSVG(28, miniH, 'logo1', p.gradStart, p.gradEnd, p.gradDir || 'lr', `mg${state.pi}`, p.gradStartPct || 0, p.gradEndPct || 100);
+}
+
+function renderPresets() {
+  const list = document.getElementById('preset-list');
+  list.innerHTML = '';
+  PRESETS.forEach((p, i) => {
+    const el = document.createElement('div');
+    el.className = 'preset-item' + (i === state.pi ? ' active' : '');
+    el.onclick = (e) => { if (e.target.tagName !== 'BUTTON') applyPreset(i); };
+
+    const miniH = Math.round(28 * DNA_VH / DNA_VW);
+    const mini = dnaSVG(28, miniH, 'logo1', p.gradStart, p.gradEnd, p.gradDir || 'lr', `mg${i}`, p.gradStartPct || 0, p.gradEndPct || 100);
+
+    el.innerHTML = `
+      <div class="preset-icon">${mini}</div>
+      <div class="preset-meta">
+        <div style="display:flex;align-items:center;gap:3px">
+          <span class="preset-name" style="color:${p.isMain ? '#a0aeca' : p.gradEnd}">${p.label}</span>
+          <button class="preset-edit-btn" onclick="editPresetName(${i},this.previousElementSibling)" title="Renommer">✎</button>
+          <button class="preset-del-btn" onclick="deletePreset(${i})" title="Supprimer">×</button>
+        </div>
+        <div class="preset-hint">${p.isMain ? 'Logo principal' : p.tag.slice(0, 26) + '…'}</div>
+      </div>`;
+    list.appendChild(el);
+  });
+}
+
+function editPresetName(i, nameEl) {
+  const p = PRESETS[i];
+  const inp = document.createElement('input');
+  inp.className = 'preset-name-input';
+  inp.value = p.label;
+  const commit = () => {
+    const v = inp.value.trim();
+    if (v) {
+      p.label = v;
+      if (!p.isMain) p.sub = v.replace(/^TORSORA\s*/i, '').trim() || p.sub;
+    }
+    renderPresets();
+    if (state.pi === i) { state.subName = p.sub; document.getElementById('inp-sub').value = p.sub; renderLogo(); }
+  };
+  inp.onblur = commit;
+  inp.onkeydown = e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') { inp.value = p.label; inp.blur(); } };
+  nameEl.replaceWith(inp);
+  inp.focus(); inp.select();
+}
+
+function renderSymbolSelector() {
+  const container = document.getElementById('sym-sel');
+  container.innerHTML = '';
+  const l1H = Math.round(24 * DNA_VH / DNA_VW);
+  const l1svg = dnaSVG(24, l1H, 'logo1', state.gradStart, state.gradEnd, state.gradDir, 'symPrev1', state.gradStartPct, state.gradEndPct);
+  const l2H = Math.round(24 * LOGO2_VH / LOGO2_VW);
+  const l2svg = dnaSVG(24, l2H, 'logo2', state.gradStart, state.gradEnd, state.gradDir, 'symPrev2', state.gradStartPct, state.gradEndPct);
+
+  ['logo1', 'logo2'].forEach((type, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'sym-btn' + (state.symType === type ? ' on' : '');
+    btn.innerHTML = (idx === 0 ? l1svg : l2svg) + `<span>Logo ${idx + 1}</span>`;
+    btn.onclick = () => { state.symType = type; renderSymbolSelector(); renderLogo(); };
+    container.appendChild(btn);
+  });
+}
+
+function renderSwatches(containerId, currentColor, onPick) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = '';
+  SWATCH_COLORS.forEach(sw => {
+    const el = document.createElement('div');
+    el.className = 'sw' + (currentColor === sw.hex ? ' on' : '');
+    el.style.background = sw.hex;
+    el.title = sw.name;
+    el.onclick = () => onPick(sw.hex);
+    c.appendChild(el);
+  });
+  const cust = document.createElement('div');
+  cust.className = 'sw-cust';
+  const span = document.createElement('span');
+  span.textContent = '+';
+  const inp = document.createElement('input');
+  inp.type = 'color';
+  inp.value = currentColor;
+  inp.oninput = () => onPick(inp.value);
+  cust.appendChild(span);
+  cust.appendChild(inp);
+  c.appendChild(cust);
+}
+
+function pickAccent(hex) {
+  state.accent = hex;
+  // sync colorSub if it was equal to the old accent
+  renderSwatches('accent-sw', state.accent, pickAccent);
+  renderLogo();
+}
+
+function renderControls() {
+  document.getElementById('inp-sub').value = state.subName;
+  document.getElementById('inp-tag').value = state.tagline;
+
+
+  renderSwatches('accent-sw', state.accent, pickAccent);
+  renderSymbolSelector();
+
+  // Individual text colors
+  document.getElementById('color-main').value = state.colorMain;
+  document.getElementById('color-sub').value  = state.colorSub;
+  document.getElementById('color-tag').value  = state.colorTag;
+  document.getElementById('upper-main').classList.toggle('on', !!state.upperMain);
+  document.getElementById('upper-sub').classList.toggle('on',  !!state.upperSub);
+  document.getElementById('upper-tag').classList.toggle('on',  !!state.upperTag);
+  document.getElementById('btn-link-sub').classList.toggle('on', !!state.linkSubToGrad);
+
+  document.getElementById('grad-start').value = state.gradStart;
+  document.getElementById('grad-end').value   = state.gradEnd;
+
+  const sp = state.gradStartPct;
+  const ep = state.gradEndPct;
+  document.getElementById('sl-gStartPct').value  = sp;
+  document.getElementById('val-gStartPct').textContent = sp + '%';
+  document.getElementById('sl-gEndPct').value    = ep;
+  document.getElementById('val-gEndPct').textContent   = ep + '%';
+
+  document.querySelectorAll('.dir-btn').forEach(btn => {
+    btn.classList.toggle('on', btn.dataset.dir === state.gradDir);
+  });
+
+  // Typography selects
+  document.getElementById('sel-fontTitle').value = state.fontTitle;
+  document.getElementById('sel-fontTag').value   = state.fontTagFamily;
+
+  const setSlider = (id, valId, v, suffix) => {
+    const el = document.getElementById(id);
+    if (el) el.value = v;
+    const vel = document.getElementById(valId);
+    if (vel) vel.textContent = (suffix ? v + suffix : v);
+  };
+
+  // Font size sliders
+  setSlider('sl-fontMain', 'val-fontMain', state.fontMain);
+  setSlider('sl-fontSub',  'val-fontSub',  state.fontSub);
+  setSlider('sl-fontTag',  'val-fontTag',  state.fontTag);
+
+  // Weight sliders
+  setSlider('sl-wMain', 'val-wMain', state.weightMain);
+  setSlider('sl-wSub',  'val-wSub',  state.weightSub);
+  setSlider('sl-wTag',  'val-wTag',  state.weightTag);
+
+  // Letter-spacing sliders
+  const lsMainEl = document.getElementById('sl-lsMain');
+  if (lsMainEl) lsMainEl.value = state.lsMain;
+  document.getElementById('val-lsMain').textContent = state.lsMain === -1 ? 'auto' : state.lsMain;
+
+  const lsSubEl = document.getElementById('sl-lsSub');
+  if (lsSubEl) lsSubEl.value = state.lsSub;
+  document.getElementById('val-lsSub').textContent = state.lsSub === -1 ? 'auto' : state.lsSub;
+
+  const lsTagEl = document.getElementById('sl-lsTag');
+  if (lsTagEl) lsTagEl.value = state.lsTag;
+  document.getElementById('val-lsTag').textContent = state.lsTag;
+
+  // Square size
+  const sqEl = document.getElementById('sl-sqSize');
+  if (sqEl) sqEl.value = state.sqSizeOverride < 2 ? 2 : state.sqSizeOverride;
+  document.getElementById('val-sqSize').textContent = state.sqSizeOverride < 2 ? 'auto' : state.sqSizeOverride;
+
+  // Position sliders
+  setSlider('sl-gap',      'val-gap',      state.offsetGap);
+  setSlider('sl-offTY',    'val-offTY',    state.offsetTorsoraY);
+  setSlider('sl-offSX',    'val-offSX',    state.offsetSubX);
+  setSlider('sl-offSY',    'val-offSY',    state.offsetSubY);
+  setSlider('sl-offTagX',  'val-offTagX',  state.offsetTagX);
+  setSlider('sl-offTagY',  'val-offTagY',  state.offsetTagY);
+  setSlider('sl-offSqX',   'val-offSqX',   state.offsetSquareX);
+  setSlider('sl-offSqY',   'val-offSqY',   state.offsetSquareY);
+}
+
+// ════════════════════════════════════════════════════════════
+// ACTIONS
+// ════════════════════════════════════════════════════════════
+
+function applyPreset(i) {
+  const p = PRESETS[i];
+  state.pi       = i;
+  state.subName  = p.sub;
+  state.tagline  = p.tag;
+  state.accent   = p.accent;
+  state.txtColor = p.txt;
+  state.isMain   = p.isMain;
+
+  state.gradStart    = p.gradStart;
+  state.gradEnd      = p.gradEnd;
+  state.gradStartPct = p.gradStartPct;
+  state.gradEndPct   = p.gradEndPct;
+  state.gradDir      = p.gradDir;
+
+  if (p.snapshot) {
+    // Inherited config from a previous preset — restore it
+    Object.assign(state, p.snapshot);
+    state.colorSub = p.gradEnd; // accent always follows gradEnd
+  } else {
+    // Built-in preset — reset to defaults
+    state.colorMain = '#1a2338';
+    state.colorSub  = p.gradEnd;
+    state.colorTag  = '#6b7a9a';
+    state.upperMain = true; state.upperSub = true; state.upperTag = false;
+    state.fontMain = 50; state.fontSub = 33; state.fontTag = 11;
+    state.fontTitle = 'Bebas Neue'; state.fontTagFamily = 'Outfit';
+    state.weightMain = 400; state.weightSub = 400; state.weightTag = 300;
+    state.lsMain = -1; state.lsSub = -1; state.lsTag = 0.3;
+    state.sqSizeOverride = -1;
+    state.offsetGap = 26;
+    state.offsetTorsoraY = 0; state.offsetSubX = 0; state.offsetSubY = 0;
+    state.offsetTagX = 0; state.offsetTagY = 0; state.offsetSquareX = 0; state.offsetSquareY = 0;
+  }
+
+  document.querySelectorAll('.preset-item').forEach((el, idx) => el.classList.toggle('active', idx === i));
+  renderControls();
+  renderLogo();
+}
+
+function toggleUpper(which) {
+  const key = which === 'main' ? 'upperMain' : which === 'sub' ? 'upperSub' : 'upperTag';
+  state[key] = !state[key];
+  document.getElementById('upper-' + which).classList.toggle('on', state[key]);
+  renderLogo();
+}
+
+function toggleLinkSub() {
+  state.linkSubToGrad = !state.linkSubToGrad;
+  document.getElementById('btn-link-sub').classList.toggle('on', state.linkSubToGrad);
+  if (state.linkSubToGrad) {
+    state.colorSub = state.gradEnd;
+    document.getElementById('color-sub').value = state.gradEnd;
+    renderLogo();
+  }
+}
+
+function setGradEnd(v) {
+  state.gradEnd = v;
+  if (state.linkSubToGrad) {
+    state.colorSub = v;
+    document.getElementById('color-sub').value = v;
+  }
+  renderLogo();
+}
+
+function deletePreset(i) {
+  if (PRESETS.length <= 1) return;
+  PRESETS.splice(i, 1);
+  if (state.pi >= PRESETS.length) state.pi = PRESETS.length - 1;
+  else if (state.pi > i) state.pi--;
+  renderPresets();
+  if (state.pi === i || state.pi > i) applyPreset(Math.min(state.pi, PRESETS.length - 1));
+}
+
+function setGradDir(dir) {
+  state.gradDir = dir;
+  document.querySelectorAll('.dir-btn').forEach(btn => btn.classList.toggle('on', btn.dataset.dir === dir));
+  renderLogo();
+}
+
+function resetGradient() {
+  state.gradStart    = state.isMain ? '#1D4ED8' : '#070b14';
+  state.gradEnd      = state.isMain ? '#8B21E8' : state.accent;
+  state.gradStartPct = 0;
+  state.gradEndPct   = 100;
+  state.gradDir      = 'lr';
+  document.getElementById('grad-start').value = state.gradStart;
+  document.getElementById('grad-end').value   = state.gradEnd;
+  document.getElementById('sl-gStartPct').value = 0;
+  document.getElementById('val-gStartPct').textContent = '0%';
+  document.getElementById('sl-gEndPct').value = 100;
+  document.getElementById('val-gEndPct').textContent = '100%';
+  document.querySelectorAll('.dir-btn').forEach(btn => btn.classList.toggle('on', btn.dataset.dir === 'lr'));
+  renderLogo();
+}
+
+function resetAllOffsets() {
+  state.offsetGap = 26;
+  state.offsetTorsoraY = 0; state.offsetSubX = 0; state.offsetSubY = 0;
+  state.offsetTagX = 0; state.offsetTagY = 0; state.offsetSquareX = 0; state.offsetSquareY = 0;
+  const posDefaults = { 'sl-gap': 26, 'sl-offTY': 0, 'sl-offSX': 0, 'sl-offSY': 0, 'sl-offTagX': 0, 'sl-offTagY': 0, 'sl-offSqX': 0, 'sl-offSqY': 0 };
+  Object.entries(posDefaults).forEach(([id, v]) => { const el = document.getElementById(id); if (el) el.value = v; });
+  const posVals = { 'val-gap': 26, 'val-offTY': 0, 'val-offSX': 0, 'val-offSY': 0, 'val-offTagX': 0, 'val-offTagY': 0, 'val-offSqX': 0, 'val-offSqY': 0 };
+  Object.entries(posVals).forEach(([id, v]) => { const el = document.getElementById(id); if (el) el.textContent = v; });
+  renderLogo();
+}
+
+function setBg(mode) {
+  state.bg = mode;
+  const card = document.getElementById('preview-card');
+  card.style.background = mode === 'dark' ? '#1a2338' : 'white';
+  document.getElementById('bg-w').classList.toggle('active', mode === 'white');
+  document.getElementById('bg-d').classList.toggle('active', mode === 'dark');
+}
+
+function setSize(sz, btn) {
+  state.exportSize = sz;
+  document.querySelectorAll('.sz-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+function flashAndGenerate() {
+  renderLogo();
+  const card = document.getElementById('preview-card');
+  card.style.boxShadow = '0 0 0 3px #16a34a, 0 30px 90px rgba(0,0,0,0.55)';
+  setTimeout(() => {
+    card.style.boxShadow = '0 0 0 1px rgba(255,255,255,0.04), 0 30px 90px rgba(0,0,0,0.55), 0 8px 28px rgba(0,0,0,0.35)';
+  }, 700);
+}
+
+function downloadSVG() {
+  const svg = logoSVG({
+    subName:        state.subName,
+    tagline:        state.tagline,
+    accent:         state.accent,
+    txtColor:       state.txtColor,
+    isMain:         state.isMain,
+    symType:        state.symType,
+    gradStart:      state.gradStart,
+    gradEnd:        state.gradEnd,
+    gradStartPct:   state.gradStartPct,
+    gradEndPct:     state.gradEndPct,
+    gradDir:        state.gradDir,
+    fontMain:       state.fontMain,
+    fontSub:        state.fontSub,
+    fontTag:        state.fontTag,
+    fontTitle:      state.fontTitle,
+    fontTagFamily:  state.fontTagFamily,
+    weightMain:     state.weightMain,
+    weightSub:      state.weightSub,
+    weightTag:      state.weightTag,
+    lsMain:         state.lsMain,
+    lsSub:          state.lsSub,
+    lsTag:          state.lsTag,
+    sqSizeOverride: state.sqSizeOverride,
+    colorMain:      state.colorMain,
+    colorSub:       state.colorSub,
+    colorTag:       state.colorTag,
+    upperMain:      state.upperMain,
+    upperSub:       state.upperSub,
+    upperTag:       state.upperTag,
+    offsetGap:      state.offsetGap,
+    offsetTorsoraY: state.offsetTorsoraY,
+    offsetSubX:     state.offsetSubX,
+    offsetSubY:     state.offsetSubY,
+    offsetTagX:     state.offsetTagX,
+    offsetTagY:     state.offsetTagY,
+    offsetSquareX:  state.offsetSquareX,
+    offsetSquareY:  state.offsetSquareY,
+    forExport:      true,
+  });
+  const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  const name = state.isMain ? 'torsora' : `torsora-${(state.subName || 'logo').toLowerCase()}`;
+  a.download = `${name}-logo.svg`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ════════════════════════════════════════════════════════════
+// SAVE / LOAD CONFIGURATION
+// ════════════════════════════════════════════════════════════
+
+const LS_KEY = 'torsora_logo_state_v2';
+
+// ── Debounce timer for server sync ────────────────────────────
+let _saveTimer = null;
+
+function saveToLocalStorage() {
+  // Always write to localStorage as local fallback
+  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e) {}
+
+  // Debounced server sync (500ms)
+  clearTimeout(_saveTimer);
+  setSyncIndicator('saving');
+  _saveTimer = setTimeout(async () => {
+    try {
+      const res = await fetch('/api/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state),
+      });
+      if (res.ok) setSyncIndicator('synced');
+      else setSyncIndicator('error');
+    } catch(_) {
+      setSyncIndicator('error');
+    }
+  }, 500);
+}
+
+function setSyncIndicator(status) {
+  const el = document.getElementById('sync-indicator');
+  if (!el) return;
+  if (status === 'saving')      { el.style.color = '#ca8a04'; el.textContent = '● saving…'; }
+  else if (status === 'synced') { el.style.color = '#16a34a'; el.textContent = '● synced';  }
+  else                          { el.style.color = '#dc2626'; el.textContent = '● offline';  }
+}
+
+// Per-preset config storage: map of preset id → state snapshot
+const presetConfigs = {};
+
+// ════════════════════════════════════════════════════════════
+// UNDO / REDO STACK
+// ════════════════════════════════════════════════════════════
+
+const MAX_UNDO = 50;
+let undoStack  = [];  // array of state snapshots (deep copies)
+let redoStack  = [];  // array of state snapshots (deep copies)
+let _skipPush  = false; // flag to prevent push during undo/redo itself
+
+function snapshotState() {
+  return JSON.parse(JSON.stringify(state));
+}
+
+function pushUndo() {
+  if (_skipPush) return;
+  undoStack.push(snapshotState());
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+  redoStack = [];  // any new action clears redo
+  updateUndoButtons();
+}
+
+function undo() {
+  if (undoStack.length === 0) return;
+  redoStack.push(snapshotState());
+  const prev = undoStack.pop();
+  _skipPush = true;
+  Object.assign(state, prev);
+  renderControls();
+  renderLogo();
+  _skipPush = false;
+  updateUndoButtons();
+  showToast('Annulé ↩');
+}
+
+function redo() {
+  if (redoStack.length === 0) return;
+  undoStack.push(snapshotState());
+  const next = redoStack.pop();
+  _skipPush = true;
+  Object.assign(state, next);
+  renderControls();
+  renderLogo();
+  _skipPush = false;
+  updateUndoButtons();
+  showToast('Rétabli ↪');
+}
+
+function updateUndoButtons() {
+  const btnU = document.getElementById('btn-undo');
+  const btnR = document.getElementById('btn-redo');
+  if (btnU) btnU.disabled = undoStack.length === 0;
+  if (btnR) btnR.disabled = redoStack.length === 0;
+}
+
+// Keyboard shortcuts: Ctrl+Z → undo, Ctrl+Y / Ctrl+Shift+Z → redo
+document.addEventListener('keydown', (e) => {
+  const ctrl = e.ctrlKey || e.metaKey;
+  if (!ctrl) return;
+  if (e.key === 'z' || e.key === 'Z') {
+    if (e.shiftKey) { e.preventDefault(); redo(); }
+    else            { e.preventDefault(); undo(); }
+  }
+  if (e.key === 'y' || e.key === 'Y') {
+    e.preventDefault(); redo();
+  }
+});
+
+function saveConfig() {
+  // Global save: all presets + their saved configs + current state
+  const extra = PRESETS.slice(7);
+  const payload = {
+    version: 2,
+    currentState: Object.assign({}, state),
+    customPresets: extra,
+    presetConfigs: presetConfigs,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'torsora-config-global.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Configuration globale sauvegardée ✓');
+}
+
+function loadConfig(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      // v2 global format: { version, currentState, customPresets, presetConfigs }
+      // legacy: { state, customPresets } or just state
+      const s = data.currentState || data.state || data;
+      Object.assign(state, s);
+      if (data.customPresets && Array.isArray(data.customPresets)) {
+        PRESETS.splice(7, PRESETS.length - 7, ...data.customPresets);
+      }
+      if (data.presetConfigs) {
+        Object.assign(presetConfigs, data.presetConfigs);
+      }
+      renderPresets();
+      renderControls();
+      renderLogo();
+      showToast('Configuration importée ✓');
+    } catch(err) {
+      showToast('Fichier invalide ✗');
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+// ── PNG export helper ──────────────────────────────────────
+function svgToPNG(svgStr, w, h, filename) {
+  const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const img  = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width  = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    // white background if needed
+    if (state.bg === 'white') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h); }
+    ctx.drawImage(img, 0, 0, w, h);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(pngBlob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(pngBlob);
+      a.download = filename;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }, 'image/png');
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); showToast('Erreur PNG ✗'); };
+  img.src = url;
+}
+
+function getExportPx() {
+  return state.exportSize === 'sm' ? 480 : state.exportSize === 'lg' ? 1200 : 800;
+}
+
+function downloadPNG() {
+  const svgStr = logoSVG({
+    subName: state.subName, tagline: state.tagline, accent: state.accent,
+    txtColor: state.txtColor, isMain: state.isMain, symType: state.symType,
+    gradStart: state.gradStart, gradEnd: state.gradEnd,
+    gradStartPct: state.gradStartPct, gradEndPct: state.gradEndPct, gradDir: state.gradDir,
+    fontMain: state.fontMain, fontSub: state.fontSub, fontTag: state.fontTag,
+    fontTitle: state.fontTitle, fontTagFamily: state.fontTagFamily,
+    weightMain: state.weightMain, weightSub: state.weightSub, weightTag: state.weightTag,
+    lsMain: state.lsMain, lsSub: state.lsSub, lsTag: state.lsTag,
+    sqSizeOverride: state.sqSizeOverride,
+    offsetGap: state.offsetGap, offsetTorsoraY: state.offsetTorsoraY,
+    offsetSubX: state.offsetSubX, offsetSubY: state.offsetSubY,
+    offsetTagX: state.offsetTagX, offsetTagY: state.offsetTagY,
+    offsetSquareX: state.offsetSquareX, offsetSquareY: state.offsetSquareY,
+    forExport: true,
+  });
+  // Parse actual SVG dimensions
+  const tmp = document.createElement('div');
+  tmp.innerHTML = svgStr;
+  const svgEl = tmp.querySelector('svg');
+  const svgW = parseFloat(svgEl.getAttribute('width')) || 800;
+  const svgH = parseFloat(svgEl.getAttribute('height')) || 400;
+  const px = getExportPx();
+  const scale = px / svgW;
+  const name = state.isMain ? 'torsora' : `torsora-${(state.subName || 'logo').toLowerCase()}`;
+  svgToPNG(svgStr, Math.round(svgW * scale), Math.round(svgH * scale), `${name}-logo.png`);
+}
+
+// ── DNA icon export ────────────────────────────────────────
+function setIconSize(sz, btn) {
+  state.iconSize = sz;
+  btn.closest('.size-row').querySelectorAll('.sz-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+function dnaSVGSquare(px) {
+  const { vw, vh } = getSymData(state.symType);
+  const padding = Math.round(px * 0.08);
+  const inner   = px - padding * 2;
+  // Scale to fit symbol in square with padding, centered
+  const scaleX = inner / vw;
+  const scaleY = inner / vh;
+  const sc     = Math.min(scaleX, scaleY);
+  const offX   = padding + (inner - vw * sc) / 2;
+  const offY   = padding + (inner - vh * sc) / 2;
+  const { paths, tx, ty } = getSymData(state.symType);
+  const gradId = 'iconGrad';
+  const maskId = 'iconMask';
+  const gc = gradCoords(state.gradDir, px, px);
+  const maskPaths = paths.map(d => `<path d="${d}" fill="white"/>`).join('\n');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 ${px} ${px}">
+  <defs>
+    <linearGradient id="${gradId}" x1="${gc.x1 * px / vw}" y1="${gc.y1 * px / vh}" x2="${gc.x2 * px / vw}" y2="${gc.y2 * px / vh}" gradientUnits="userSpaceOnUse">
+      <stop offset="${state.gradStartPct}%" stop-color="${state.gradStart}"/>
+      <stop offset="${state.gradEndPct}%"  stop-color="${state.gradEnd}"/>
+    </linearGradient>
+    <mask id="${maskId}">
+      <rect width="${px}" height="${px}" fill="black"/>
+      <g transform="translate(${offX + tx * sc},${offY + ty * sc}) scale(${sc})">
+        ${maskPaths}
+      </g>
+    </mask>
+  </defs>
+  <rect width="${px}" height="${px}" fill="url(#${gradId})" mask="url(#${maskId})"/>
+</svg>`;
+}
+
+function downloadDNASVG() {
+  const px  = state.iconSize || 512;
+  const svg = dnaSVGSquare(px);
+  const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  const name = state.isMain ? 'torsora' : `torsora-${(state.subName || 'logo').toLowerCase()}`;
+  a.download = `${name}-icon-${px}.svg`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function downloadDNAPNG() {
+  const px  = state.iconSize || 512;
+  const svg = dnaSVGSquare(px);
+  const name = state.isMain ? 'torsora' : `torsora-${(state.subName || 'logo').toLowerCase()}`;
+  svgToPNG(svg, px, px, `${name}-icon-${px}.png`);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ════════════════════════════════════════════════════════════
+// ADD PRESET
+// ════════════════════════════════════════════════════════════
+
+function showAddForm() {
+  document.getElementById('add-form').classList.add('vis');
+  document.getElementById('add-sub').focus();
+}
+function cancelAddPreset() {
+  document.getElementById('add-form').classList.remove('vis');
+  document.getElementById('add-sub').value = '';
+  document.getElementById('add-tag').value = '';
+  document.getElementById('add-accent').value = '#3B82F6';
+}
+function confirmAddPreset() {
+  const sub    = document.getElementById('add-sub').value.trim().toUpperCase();
+  const tag    = document.getElementById('add-tag').value.trim();
+  const accent = document.getElementById('add-accent').value;
+  if (!sub) { document.getElementById('add-sub').focus(); return; }
+  PRESETS.push({
+    id: 'custom_' + Date.now(),
+    label: 'TORSORA ' + sub,
+    sub, tag: tag || ('Solutions ' + sub + ' par TORSORA'),
+    accent, isMain: false, txt: 'dark',
+    // Gradient: inherit structure, new accent as end color
+    gradStart: state.gradStart, gradEnd: accent,
+    gradStartPct: state.gradStartPct, gradEndPct: state.gradEndPct, gradDir: state.gradDir,
+    // Snapshot of all current typography/spacing settings
+    snapshot: {
+      colorMain: state.colorMain, colorTag: state.colorTag,
+      upperMain: state.upperMain, upperSub: state.upperSub, upperTag: state.upperTag,
+      linkSubToGrad: state.linkSubToGrad, symType: state.symType,
+      fontMain: state.fontMain, fontSub: state.fontSub, fontTag: state.fontTag,
+      fontTitle: state.fontTitle, fontTagFamily: state.fontTagFamily,
+      weightMain: state.weightMain, weightSub: state.weightSub, weightTag: state.weightTag,
+      lsMain: state.lsMain, lsSub: state.lsSub, lsTag: state.lsTag,
+      sqSizeOverride: state.sqSizeOverride, offsetGap: state.offsetGap,
+      offsetTorsoraY: state.offsetTorsoraY, offsetSubX: state.offsetSubX, offsetSubY: state.offsetSubY,
+      offsetTagX: state.offsetTagX, offsetTagY: state.offsetTagY,
+      offsetSquareX: state.offsetSquareX, offsetSquareY: state.offsetSquareY,
+    },
+  });
+  cancelAddPreset();
+  renderPresets();
+  applyPreset(PRESETS.length - 1);
+}
+
+// ════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════
+(async function init() {
+  let loaded = false;
+
+  // 1. Try server-side state first (cross-device sync)
+  try {
+    const res = await fetch('/api/state');
+    if (res.ok) {
+      const serverState = await res.json();
+      Object.assign(state, serverState);
+      loaded = true;
+      setSyncIndicator('synced');
+    }
+  } catch(_) { /* offline or first launch */ }
+
+  // 2. Fallback to localStorage
+  if (!loaded) {
+    try {
+      const saved = localStorage.getItem(LS_KEY);
+      if (saved) {
+        Object.assign(state, JSON.parse(saved));
+        loaded = true;
+      }
+    } catch(e) {}
+  }
+
+  renderPresets();
+  updateUndoButtons();
+
+  if (!loaded) {
+    applyPreset(4);  // default preset (DEV)
+  } else {
+    renderControls();
+    renderLogo();
+  }
+})();
+</script>
+</body>
+</html>
