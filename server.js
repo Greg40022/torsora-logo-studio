@@ -6,8 +6,9 @@ const path    = require('path');
 
 // ── Config ────────────────────────────────────────────────────
 const PORT      = process.env.PORT      || 3000;
-const AUTH_USER = process.env.AUTH_USER || 'admin';
-const AUTH_PASS = process.env.AUTH_PASS || 'changeme';
+// .trim() protects against Portainer adding accidental whitespace/quotes in env vars
+const AUTH_USER = (process.env.AUTH_USER || 'admin').trim().replace(/^["']|["']$/g, '');
+const AUTH_PASS = (process.env.AUTH_PASS || 'changeme').trim().replace(/^["']|["']$/g, '');
 
 const DATA_DIR     = path.join(__dirname, 'data');
 const STATE_FILE   = path.join(DATA_DIR, 'state.json');
@@ -20,10 +21,18 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 // ── Basic Auth middleware ─────────────────────────────────────
 function basicAuth(req, res, next) {
   const authHeader = req.headers['authorization'] || '';
-  const b64        = authHeader.startsWith('Basic ') ? authHeader.slice(6) : '';
-  const [user, pass] = Buffer.from(b64, 'base64').toString().split(':');
+  const b64        = (authHeader.startsWith('Basic ') ? authHeader.slice(6) : '').trim();
+
+  // Decode and split only on the FIRST colon (password may contain colons)
+  const decoded  = Buffer.from(b64, 'base64').toString('utf8');
+  const colonIdx = decoded.indexOf(':');
+  const user     = colonIdx >= 0 ? decoded.slice(0, colonIdx) : '';
+  const pass     = colonIdx >= 0 ? decoded.slice(colonIdx + 1) : '';
 
   if (user === AUTH_USER && pass === AUTH_PASS) return next();
+
+  // Log failed attempts (no password in logs)
+  if (b64) console.log(`[auth] Failed attempt — got user: "${user}", expected: "${AUTH_USER}"`);
 
   res.set('WWW-Authenticate', 'Basic realm="TORSORA Logo Studio"');
   res.status(401).send('Authentication required.');
@@ -81,7 +90,11 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// GET /health — no auth required (for Docker healthcheck and monitoring)
+app.get('/health', (_req, res) => res.json({ ok: true }));
+
 app.listen(PORT, () => {
   console.log(`TORSORA Logo Studio listening on port ${PORT}`);
-  console.log(`Auth user: ${AUTH_USER}`);
+  console.log(`Auth user: "${AUTH_USER}" (${AUTH_USER.length} chars)`);
+  console.log(`Auth pass: [${AUTH_PASS.length} chars]`);
 });
