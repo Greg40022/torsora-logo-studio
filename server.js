@@ -31,8 +31,8 @@ function basicAuth(req, res, next) {
 
   if (user === AUTH_USER && pass === AUTH_PASS) return next();
 
-  // Log failed attempts (no password in logs)
-  if (b64) console.log(`[auth] Failed attempt — got user: "${user}", expected: "${AUTH_USER}"`);
+  // Log failed attempts (lengths only, no password values)
+  if (b64) console.log(`[auth] Failed — user: "${user}"=="${AUTH_USER}"? ${user === AUTH_USER} | pass length: got=${pass.length} expected=${AUTH_PASS.length} | pass chars: ${[...pass].map(c => c.charCodeAt(0)).join(',')}`);
 
   res.set('WWW-Authenticate', 'Basic realm="TORSORA Logo Studio"');
   res.status(401).send('Authentication required.');
