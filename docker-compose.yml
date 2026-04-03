@@ -9,8 +9,8 @@ services:
       - "3002:3000"
     environment:
       - PORT=3000
-      - AUTH_USER=${AUTH_USER:-admin}
-      - AUTH_PASS=${AUTH_PASS:-changeme}
+      - AUTH_USER
+      - AUTH_PASS
     volumes:
       - ./data:/app/data
     healthcheck:
