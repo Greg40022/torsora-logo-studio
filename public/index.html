@@ -1309,6 +1309,11 @@ function renderControls() {
 // ════════════════════════════════════════════════════════════
 
 function applyPreset(i) {
+  // Save current preset's state before switching (so edits are not lost)
+  if (PRESETS[state.pi]) {
+    presetConfigs[PRESETS[state.pi].id] = JSON.parse(JSON.stringify(state));
+  }
+
   const p = PRESETS[i];
   state.pi       = i;
   state.subName  = p.sub;
@@ -1323,12 +1328,17 @@ function applyPreset(i) {
   state.gradEndPct   = p.gradEndPct;
   state.gradDir      = p.gradDir;
 
-  if (p.snapshot) {
-    // Inherited config from a previous preset — restore it
+  const saved = presetConfigs[p.id];
+  if (saved) {
+    // Restore user's previously saved edits for this preset
+    Object.assign(state, saved);
+    state.pi = i; // always keep correct index after restore
+  } else if (p.snapshot) {
+    // Custom preset created from existing state — restore its snapshot
     Object.assign(state, p.snapshot);
-    state.colorSub = p.gradEnd; // accent always follows gradEnd
+    state.colorSub = p.gradEnd;
   } else {
-    // Built-in preset — reset to defaults
+    // Built-in preset with no saved edits — reset to defaults
     state.colorMain = '#1a2338';
     state.colorSub  = p.gradEnd;
     state.colorTag  = '#6b7a9a';
@@ -1501,9 +1511,24 @@ const LS_KEY = 'torsora_logo_state_v2';
 // ── Debounce timer for server sync ────────────────────────────
 let _saveTimer = null;
 
+function buildFullPayload() {
+  // Snapshot current preset into presetConfigs before building payload
+  if (PRESETS[state.pi]) {
+    presetConfigs[PRESETS[state.pi].id] = JSON.parse(JSON.stringify(state));
+  }
+  return {
+    version: 2,
+    currentState: state,
+    customPresets: PRESETS.slice(7),
+    presetConfigs: presetConfigs,
+  };
+}
+
 function saveToLocalStorage() {
+  const payload = buildFullPayload();
+
   // Always write to localStorage as local fallback
-  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e) {}
+  try { localStorage.setItem(LS_KEY, JSON.stringify(payload)); } catch(e) {}
 
   // Debounced server sync (500ms)
   clearTimeout(_saveTimer);
@@ -1513,7 +1538,7 @@ function saveToLocalStorage() {
       const res = await fetch('/api/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(state),
+        body: JSON.stringify(payload),
       });
       if (res.ok) setSyncIndicator('synced');
       else setSyncIndicator('error');
@@ -1826,12 +1851,24 @@ function confirmAddPreset() {
 (async function init() {
   let loaded = false;
 
+  function restoreFullConfig(data) {
+    // Support both old format (just state) and new format ({ version, currentState, presetConfigs, customPresets })
+    const s = data.currentState || data.state || (data.version ? null : data);
+    if (s) Object.assign(state, s);
+    if (data.customPresets && Array.isArray(data.customPresets)) {
+      PRESETS.splice(7, PRESETS.length - 7, ...data.customPresets);
+    }
+    if (data.presetConfigs && typeof data.presetConfigs === 'object') {
+      Object.assign(presetConfigs, data.presetConfigs);
+    }
+  }
+
   // 1. Try server-side state first (cross-device sync)
   try {
     const res = await fetch('/api/state');
     if (res.ok) {
-      const serverState = await res.json();
-      Object.assign(state, serverState);
+      const data = await res.json();
+      restoreFullConfig(data);
       loaded = true;
       setSyncIndicator('synced');
     }
@@ -1842,7 +1879,7 @@ function confirmAddPreset() {
     try {
       const saved = localStorage.getItem(LS_KEY);
       if (saved) {
-        Object.assign(state, JSON.parse(saved));
+        restoreFullConfig(JSON.parse(saved));
         loaded = true;
       }
     } catch(e) {}
