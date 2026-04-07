@@ -40,6 +40,13 @@ body {
 .hdr-title strong { color: #a0aeca; font-weight: 700; letter-spacing: 0.06em; }
 .hdr-save-btn { height: 28px; padding: 0 12px; background: #1a3a6e; border: 1.5px solid #2a5aaa; border-radius: 6px; color: #93c5fd; font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; letter-spacing: 0.03em; }
 .hdr-save-btn:hover { background: #1e4a8a; border-color: #3B82F6; color: #bfdbfe; }
+.hdr-cfg-group { display: flex; gap: 4px; }
+.hdr-cfg-btn { height: 28px; padding: 0 10px; border-radius: 6px; font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; letter-spacing: 0.03em; border: 1.5px solid; display: flex; align-items: center; gap: 5px; }
+.hdr-cfg-export { background: #0f2d4a; border-color: #1e5a7a; color: #67c4e8; }
+.hdr-cfg-export:hover { background: #0f3a5e; border-color: #0891b2; color: #bae6fd; }
+.hdr-cfg-import { background: #0f2d1e; border-color: #1e5a3a; color: #6ee7b7; cursor: pointer; }
+.hdr-cfg-import:hover { background: #0f3a28; border-color: #16a34a; color: #bbf7d0; }
+.hdr-cfg-import input[type="file"] { display: none; }
 /* ── UNDO/REDO BUTTONS ── */
 .hdr-undo-btn { height: 28px; padding: 0 10px; background: #12223a; border: 1.5px solid #1e3260; border-radius: 6px; color: #5a7aa8; font-family: 'Outfit', sans-serif; font-size: 13px; cursor: pointer; transition: all 0.15s; }
 .hdr-undo-btn:hover:not(:disabled) { background: #1a3050; border-color: #3B82F6; color: #93c5fd; }
@@ -387,7 +394,7 @@ input[type="range"] { width: 100%; accent-color: #3B82F6; height: 14px; }
   <div class="hdr-left">
     <div class="hdr-dots"><span></span><span></span><span></span></div>
     <div class="hdr-title"><strong>TORSORA</strong> &mdash; Générateur de Logo SVG</div>
-    <div style="font-size:10px;color:#2a3d5a;letter-spacing:0.05em;font-weight:600;">v1.3.0</div>
+    <div style="font-size:10px;color:#2a3d5a;letter-spacing:0.05em;font-weight:600;">v1.4.0</div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
     <div class="hdr-undo-group">
@@ -395,7 +402,13 @@ input[type="range"] { width: 100%; accent-color: #3B82F6; height: 14px; }
       <button class="hdr-undo-btn" id="btn-redo" onclick="redo()" title="Rétablir (Ctrl+Y)" disabled>&#x21AA;</button>
     </div>
     <span id="sync-indicator" style="font-size:10px;color:#2e3d58;letter-spacing:0.05em;min-width:60px;text-align:right;">&#x25CF;&nbsp;synced</span>
-    <button class="hdr-save-btn" onclick="saveConfig()">&#x1F4BE; Enregistrer</button>
+    <div class="hdr-cfg-group">
+      <button class="hdr-cfg-btn hdr-cfg-export" onclick="saveConfig()" title="Exporter la configuration complète en fichier JSON">&#x1F4E4; Export</button>
+      <label class="hdr-cfg-btn hdr-cfg-import" title="Importer une configuration depuis un fichier JSON">
+        &#x1F4E5; Import
+        <input type="file" accept=".json" onchange="loadConfig(this)">
+      </label>
+    </div>
     <div class="hdr-avatar">G</div>
   </div>
 </header>
@@ -700,6 +713,7 @@ input[type="range"] { width: 100%; accent-color: #3B82F6; height: 14px; }
         <input type="range" id="sl-offSqY" min="-20" max="20" step="1" value="0"
           oninput="state.offsetSquareY=+this.value;document.getElementById('val-offSqY').textContent=this.value;renderLogo()">
       </div>
+      <button class="btn-cfg btn-cfg-reset" style="margin-top:6px;width:100%" onclick="resetAllOffsets()">↺ Reset toutes les positions</button>
     </div>
 
     <!-- EXPORT SIZE -->
@@ -709,19 +723,6 @@ input[type="range"] { width: 100%; accent-color: #3B82F6; height: 14px; }
         <button class="sz-btn" onclick="setSize('sm',this)">SM<small>480px</small></button>
         <button class="sz-btn on" onclick="setSize('md',this)">MD<small>800px</small></button>
         <button class="sz-btn" onclick="setSize('lg',this)">LG<small>1200px</small></button>
-      </div>
-    </div>
-
-    <!-- CONFIGURATION SAVE/LOAD -->
-    <div class="cs">
-      <label class="cl">Configuration</label>
-      <div class="cfg-btns">
-        <button class="btn-cfg btn-cfg-save" onclick="saveConfig()">⬇ Sauvegarder config</button>
-        <label class="btn-cfg btn-cfg-load">
-          ⬆ Importer config
-          <input type="file" accept=".json" style="display:none" onchange="loadConfig(this)">
-        </label>
-        <button class="btn-cfg btn-cfg-reset" onclick="resetAllOffsets()">↺ Reset positions</button>
       </div>
     </div>
 
@@ -1636,22 +1637,17 @@ document.addEventListener('keydown', (e) => {
 });
 
 function saveConfig() {
-  // Global save: all presets + their saved configs + current state
-  const extra = PRESETS.slice(7);
-  const payload = {
-    version: 2,
-    currentState: Object.assign({}, state),
-    customPresets: extra,
-    presetConfigs: presetConfigs,
-  };
+  // buildFullPayload() snapshots the active preset before building, ensuring nothing is lost
+  const payload = buildFullPayload();
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href = url;
-  a.download = 'torsora-config-global.json';
+  const date = new Date().toISOString().slice(0, 10);
+  a.download = `torsora-config-${date}.json`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast('Configuration globale sauvegardée ✓');
+  showToast('Configuration exportée ✓');
 }
 
 function loadConfig(input) {
@@ -1661,22 +1657,35 @@ function loadConfig(input) {
   reader.onload = e => {
     try {
       const data = JSON.parse(e.target.result);
-      // v2 global format: { version, currentState, customPresets, presetConfigs }
-      // legacy: { state, customPresets } or just state
-      const s = data.currentState || data.state || data;
-      Object.assign(state, s);
+
+      // Restore custom presets first (so PRESETS[state.pi] is valid after state restore)
       if (data.customPresets && Array.isArray(data.customPresets)) {
         PRESETS.splice(7, PRESETS.length - 7, ...data.customPresets);
       }
-      if (data.presetConfigs) {
+
+      // Restore per-preset configs
+      if (data.presetConfigs && typeof data.presetConfigs === 'object') {
         Object.assign(presetConfigs, data.presetConfigs);
       }
+
+      // Restore main state (v2 format: currentState, legacy: state or root)
+      const s = data.currentState || data.state || (data.version ? null : data);
+      if (s && typeof s === 'object') {
+        Object.assign(state, s);
+      }
+
+      // Rebuild UI fully: preset list → controls → logo
       renderPresets();
       renderControls();
       renderLogo();
+
+      // Persist immediately so auto-save reflects the import
+      saveToLocalStorage();
+
       showToast('Configuration importée ✓');
     } catch(err) {
-      showToast('Fichier invalide ✗');
+      console.error('loadConfig error:', err);
+      showToast('Fichier invalide ou corrompu ✗');
     }
   };
   reader.readAsText(file);
