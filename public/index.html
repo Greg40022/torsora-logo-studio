@@ -951,10 +951,11 @@ function logoSVG(cfg) {
     offsetSquareX = 0,
     offsetSquareY = 0,
     forExport     = false,
+    fontCSS       = '',
   } = cfg;
 
   const dark = txtColor !== 'light';
-  const { vw, vh } = getSymData(symType);
+  const { paths: symPaths, vw, vh, tx: symTx, ty: symTy } = getSymData(symType);
 
   const DNA_W = isMain ? 120 : 82;
   const DNA_H = Math.round(DNA_W * (vh / vw));
@@ -1018,18 +1019,38 @@ function logoSVG(cfg) {
 
   const gradId = 'dG';
 
-  const fontImport = forExport
-    ? `<style>@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=Oswald:wght@300;400;500;600;700&amp;family=Barlow+Condensed:wght@300;400;500;600;700;800;900&amp;family=Anton&amp;family=Chakra+Petch:wght@300;400;500;600;700&amp;family=Outfit:wght@300;400;500;600&amp;family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Sora:wght@100;200;300;400;500;600&amp;display=swap');</style>`
+  // Style : fonts embarquées en base64 si disponibles, sinon @import Google Fonts
+  const fontStyle = forExport
+    ? (fontCSS
+        ? `<style>${fontCSS}</style>`
+        : `<style>@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=Oswald:wght@300;400;500;600;700&amp;family=Barlow+Condensed:wght@300;400;500;600;700;800;900&amp;family=Anton&amp;family=Chakra+Petch:wght@300;400;500;600;700&amp;family=Outfit:wght@300;400;500;600&amp;family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Sora:wght@100;200;300;400;500;600&amp;display=swap');</style>`)
     : '';
+
+  // Gradient/mask au niveau racine (compatibilité maximale SVG)
+  const gc       = gradCoords(gradDir, DNA_W, DNA_H);
+  const scaleX   = (DNA_W / vw).toFixed(6);
+  const scaleY   = (DNA_H / vh).toFixed(6);
+  const maskId   = gradId + '_mask';
+  const maskPaths = symPaths.map(d => `<path d="${d}" fill="white"/>`).join('\n        ');
 
   let lines = [];
   lines.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${SVG_W}" height="${SVG_H}" viewBox="0 0 ${SVG_W} ${SVG_H}">`);
-  if (fontImport) lines.push(fontImport);
+  if (fontStyle) lines.push(fontStyle);
 
-  // DNA symbol
-  lines.push(`  <svg x="0" y="0" width="${DNA_W}" height="${DNA_H}" viewBox="0 0 ${vw} ${vh}">`);
-  lines.push(dnaSVGContent(gradId, symType, gradStart, gradEnd, gradDir, gradStartPct, gradEndPct));
-  lines.push(`  </svg>`);
+  // DNA symbol — defs à la racine pour éviter les bugs de résolution url() dans les SVG imbriqués
+  lines.push(`  <defs>
+    <linearGradient id="${gradId}" x1="${gc.x1}" y1="${gc.y1}" x2="${gc.x2}" y2="${gc.y2}" gradientUnits="userSpaceOnUse">
+      <stop offset="${gradStartPct}%"  stop-color="${gradStart}"/>
+      <stop offset="${gradEndPct}%" stop-color="${gradEnd}"/>
+    </linearGradient>
+    <mask id="${maskId}">
+      <rect width="${DNA_W}" height="${DNA_H}" fill="black"/>
+      <g transform="scale(${scaleX},${scaleY}) translate(${symTx},${symTy})">
+        ${maskPaths}
+      </g>
+    </mask>
+  </defs>
+  <rect x="0" y="0" width="${DNA_W}" height="${DNA_H}" fill="url(#${gradId})" mask="url(#${maskId})"/>`);
 
   // TORSORA
   lines.push(`  <text x="${TX}" y="${TORSORA_Y}"
@@ -1449,7 +1470,9 @@ function flashAndGenerate() {
   }, 700);
 }
 
-function downloadSVG() {
+async function downloadSVG() {
+  showToast('Préparation SVG (chargement fonts)…');
+  const fontCSS = await loadEmbeddedFonts(state.fontTitle || 'Bebas Neue', state.fontTagFamily || 'Outfit');
   const svg = logoSVG({
     subName:        state.subName,
     tagline:        state.tagline,
@@ -1489,6 +1512,7 @@ function downloadSVG() {
     offsetSquareX:  state.offsetSquareX,
     offsetSquareY:  state.offsetSquareY,
     forExport:      true,
+    fontCSS,
   });
   const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
   const url  = URL.createObjectURL(blob);
@@ -1500,6 +1524,7 @@ function downloadSVG() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  showToast('SVG téléchargé ✓');
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1674,6 +1699,46 @@ function loadConfig(input) {
   input.value = '';
 }
 
+// ── Embedded font helpers ──────────────────────────────────
+const _fontCache = {};
+
+function _ab2b64(buffer) {
+  return new Promise(resolve => {
+    const blob   = new Blob([buffer]);
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.readAsDataURL(blob);
+  });
+}
+
+// Charge les fonts Google et les retourne en CSS avec URLs base64 embarquées.
+// Résultat mis en cache pour les exports suivants.
+async function loadEmbeddedFonts(titleFamily, tagFamily) {
+  const key = `${titleFamily}|${tagFamily}`;
+  if (_fontCache[key] !== undefined) return _fontCache[key];
+  try {
+    const families = [titleFamily, tagFamily].filter(Boolean)
+      .map(f => encodeURIComponent(f) + ':wght@300;400;500;600;700')
+      .join('&family=');
+    const cssUrl = `https://fonts.googleapis.com/css2?family=${families}&display=swap`;
+    const cssText = await fetch(cssUrl).then(r => r.text());
+    let embedded = cssText;
+    for (const [, fontUrl] of cssText.matchAll(/url\(([^)]+)\)/g)) {
+      try {
+        const buf = await fetch(fontUrl).then(r => r.arrayBuffer());
+        const b64 = await _ab2b64(buf);
+        const fmt = fontUrl.includes('.woff2') ? 'woff2' : 'woff';
+        embedded = embedded.replace(fontUrl, `data:font/${fmt};base64,${b64}`);
+      } catch {}
+    }
+    _fontCache[key] = embedded;
+    return embedded;
+  } catch {
+    _fontCache[key] = '';
+    return '';
+  }
+}
+
 // ── PNG export helper ──────────────────────────────────────
 function svgToPNG(svgStr, w, h, filename) {
   const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
@@ -1703,7 +1768,9 @@ function getExportPx() {
   return state.exportSize === 'sm' ? 480 : state.exportSize === 'lg' ? 1200 : 800;
 }
 
-function downloadPNG() {
+async function downloadPNG() {
+  showToast('Préparation PNG (chargement fonts)…');
+  const fontCSS = await loadEmbeddedFonts(state.fontTitle || 'Bebas Neue', state.fontTagFamily || 'Outfit');
   const svgStr = logoSVG({
     subName: state.subName, tagline: state.tagline, accent: state.accent,
     txtColor: state.txtColor, isMain: state.isMain, symType: state.symType,
@@ -1719,6 +1786,7 @@ function downloadPNG() {
     offsetTagX: state.offsetTagX, offsetTagY: state.offsetTagY,
     offsetSquareX: state.offsetSquareX, offsetSquareY: state.offsetSquareY,
     forExport: true,
+    fontCSS,
   });
   // Parse actual SVG dimensions
   const tmp = document.createElement('div');
