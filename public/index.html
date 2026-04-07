@@ -411,7 +411,7 @@ input[type="range"] { width: 100%; accent-color: #3B82F6; height: 14px; }
       <input type="text" id="add-sub" placeholder="Sous-nom (ex: DESIGN)" maxlength="20">
       <input type="text" id="add-tag" placeholder="Tagline…">
       <div class="add-form-color-row">
-        <span class="add-form-color-lbl">Couleur d'accent</span>
+        <span class="add-form-color-lbl">Couleur du dégradé</span>
         <input type="color" class="add-form-color-inp" id="add-accent" value="#3B82F6">
       </div>
       <div class="add-btn-row">
@@ -454,11 +454,6 @@ input[type="range"] { width: 100%; accent-color: #3B82F6; height: 14px; }
     <div class="cs">
       <label class="cl">Sous-texte</label>
       <input class="ci" id="inp-tag" type="text" placeholder="Code Intelligent & Performant" oninput="state.tagline=this.value;renderLogo()">
-    </div>
-
-    <div class="cs">
-      <label class="cl">Couleur d'accent</label>
-      <div class="swatches" id="accent-sw"></div>
     </div>
 
     <div class="cs">
@@ -776,7 +771,7 @@ const DEFAULT_STATE = {
   pi: 4,
   subName: 'DEV',
   tagline: 'Ingénierie Experte & Code par TORSORA',
-  accent: '#3B82F6',
+  txtColor: 'dark',
   colorMain: '#1a2338',
   colorSub: '#3B82F6',
   colorTag: '#6b7a9a',
@@ -918,7 +913,7 @@ function dnaSVG(W, H, symType, gradStart, gradEnd, gradDir, gradId, sp, ep) {
 
 function logoSVG(cfg) {
   const {
-    subName, tagline, accent, txtColor, isMain,
+    subName, tagline, txtColor, isMain,
     symType       = 'logo1',
     gradStart     = '#070b14',
     gradEnd       = '#3B82F6',
@@ -1092,7 +1087,6 @@ function renderLogo() {
   const svg = logoSVG({
     subName:        state.subName,
     tagline:        state.tagline,
-    accent:         state.accent,
     txtColor:       state.txtColor,
     isMain:         state.isMain,
     symType:        state.symType,
@@ -1238,19 +1232,10 @@ function renderSwatches(containerId, currentColor, onPick) {
   c.appendChild(cust);
 }
 
-function pickAccent(hex) {
-  state.accent = hex;
-  // sync colorSub if it was equal to the old accent
-  renderSwatches('accent-sw', state.accent, pickAccent);
-  renderLogo();
-}
-
 function renderControls() {
   document.getElementById('inp-sub').value = state.subName;
   document.getElementById('inp-tag').value = state.tagline;
 
-
-  renderSwatches('accent-sw', state.accent, pickAccent);
   renderSymbolSelector();
 
   // Individual text colors
@@ -1340,7 +1325,6 @@ function applyPreset(i) {
   state.pi       = i;
   state.subName  = p.sub;
   state.tagline  = p.tag;
-  state.accent   = p.accent;
   state.txtColor = p.txt;
   state.isMain   = p.isMain;
 
@@ -1423,7 +1407,7 @@ function setGradDir(dir) {
 
 function resetGradient() {
   state.gradStart    = state.isMain ? '#1D4ED8' : '#070b14';
-  state.gradEnd      = state.isMain ? '#8B21E8' : state.accent;
+  state.gradEnd      = state.isMain ? '#8B21E8' : (PRESETS[state.pi]?.gradEnd || '#3B82F6');
   state.gradStartPct = 0;
   state.gradEndPct   = 100;
   state.gradDir      = 'lr';
@@ -1477,7 +1461,6 @@ async function downloadSVG() {
   const svg = logoSVG({
     subName:        state.subName,
     tagline:        state.tagline,
-    accent:         state.accent,
     txtColor:       state.txtColor,
     isMain:         state.isMain,
     symType:        state.symType,
@@ -1773,7 +1756,7 @@ async function downloadPNG() {
   showToast('Préparation PNG (chargement fonts)…');
   const fontCSS = await loadEmbeddedFonts(state.fontTitle || 'Bebas Neue', state.fontTagFamily || 'Outfit');
   const svgStr = logoSVG({
-    subName: state.subName, tagline: state.tagline, accent: state.accent,
+    subName: state.subName, tagline: state.tagline,
     txtColor: state.txtColor, isMain: state.isMain, symType: state.symType,
     gradStart: state.gradStart, gradEnd: state.gradEnd,
     gradStartPct: state.gradStartPct, gradEndPct: state.gradEndPct, gradDir: state.gradDir,
@@ -1782,6 +1765,8 @@ async function downloadPNG() {
     weightMain: state.weightMain, weightSub: state.weightSub, weightTag: state.weightTag,
     lsMain: state.lsMain, lsSub: state.lsSub, lsTag: state.lsTag,
     sqSizeOverride: state.sqSizeOverride,
+    colorMain: state.colorMain, colorSub: state.colorSub, colorTag: state.colorTag,
+    upperMain: state.upperMain, upperSub: state.upperSub, upperTag: state.upperTag,
     offsetGap: state.offsetGap, offsetTorsoraY: state.offsetTorsoraY,
     offsetSubX: state.offsetSubX, offsetSubY: state.offsetSubY,
     offsetTagX: state.offsetTagX, offsetTagY: state.offsetTagY,
@@ -1825,7 +1810,7 @@ function dnaSVGSquare(px) {
   const maskPaths = paths.map(d => `<path d="${d}" fill="white"/>`).join('\n');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 ${px} ${px}">
   <defs>
-    <linearGradient id="${gradId}" x1="${gc.x1 * px / vw}" y1="${gc.y1 * px / vh}" x2="${gc.x2 * px / vw}" y2="${gc.y2 * px / vh}" gradientUnits="userSpaceOnUse">
+    <linearGradient id="${gradId}" x1="${gc.x1}" y1="${gc.y1}" x2="${gc.x2}" y2="${gc.y2}" gradientUnits="userSpaceOnUse">
       <stop offset="${state.gradStartPct}%" stop-color="${state.gradStart}"/>
       <stop offset="${state.gradEndPct}%"  stop-color="${state.gradEnd}"/>
     </linearGradient>
