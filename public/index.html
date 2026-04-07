@@ -394,7 +394,7 @@ input[type="range"] { width: 100%; accent-color: #3B82F6; height: 14px; }
   <div class="hdr-left">
     <div class="hdr-dots"><span></span><span></span><span></span></div>
     <div class="hdr-title"><strong>TORSORA</strong> &mdash; Générateur de Logo SVG</div>
-    <div style="font-size:10px;color:#2a3d5a;letter-spacing:0.05em;font-weight:600;">v1.4.0</div>
+    <div style="font-size:10px;color:#2a3d5a;letter-spacing:0.05em;font-weight:600;">v1.4.1</div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
     <div class="hdr-undo-group">
@@ -719,7 +719,7 @@ input[type="range"] { width: 100%; accent-color: #3B82F6; height: 14px; }
     <!-- EXPORT SIZE -->
     <div class="cs">
       <label class="cl">Taille d'export</label>
-      <div class="size-row">
+      <div class="size-row" id="export-size-row">
         <button class="sz-btn" onclick="setSize('sm',this)">SM<small>480px</small></button>
         <button class="sz-btn on" onclick="setSize('md',this)">MD<small>800px</small></button>
         <button class="sz-btn" onclick="setSize('lg',this)">LG<small>1200px</small></button>
@@ -733,7 +733,7 @@ input[type="range"] { width: 100%; accent-color: #3B82F6; height: 14px; }
       <button class="btn-exp btn-dl" onclick="downloadSVG()">Télécharger SVG</button>
       <button class="btn-exp btn-png" onclick="downloadPNG()">Télécharger PNG</button>
       <div class="export-ttl" style="margin-top:10px">Icône ADN (carré)</div>
-      <div class="size-row" style="margin-bottom:8px">
+      <div class="size-row" id="icon-size-row" style="margin-bottom:8px">
         <button class="sz-btn" onclick="setIconSize(128,this)">128</button>
         <button class="sz-btn on" onclick="setIconSize(512,this)">512</button>
         <button class="sz-btn" onclick="setIconSize(1024,this)">1024</button>
@@ -1310,6 +1310,30 @@ function renderControls() {
   setSlider('sl-offTagY',  'val-offTagY',  state.offsetTagY);
   setSlider('sl-offSqX',   'val-offSqX',   state.offsetSquareX);
   setSlider('sl-offSqY',   'val-offSqY',   state.offsetSquareY);
+
+  // Background toggle
+  const card = document.getElementById('preview-card');
+  if (card) card.style.background = state.bg === 'dark' ? '#1a2338' : 'white';
+  document.getElementById('bg-w')?.classList.toggle('active', state.bg !== 'dark');
+  document.getElementById('bg-d')?.classList.toggle('active', state.bg === 'dark');
+
+  // Export size buttons
+  const expRow = document.getElementById('export-size-row');
+  if (expRow) {
+    expRow.querySelectorAll('.sz-btn').forEach(b => b.classList.remove('on'));
+    const expMap = { sm: 0, md: 1, lg: 2 };
+    const expIdx = expMap[state.exportSize] ?? 1;
+    expRow.querySelectorAll('.sz-btn')[expIdx]?.classList.add('on');
+  }
+
+  // Icon size buttons
+  const iconRow = document.getElementById('icon-size-row');
+  if (iconRow) {
+    iconRow.querySelectorAll('.sz-btn').forEach(b => b.classList.remove('on'));
+    const iconMap = { 128: 0, 512: 1, 1024: 2 };
+    const iconIdx = iconMap[state.iconSize] ?? 1;
+    iconRow.querySelectorAll('.sz-btn')[iconIdx]?.classList.add('on');
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1443,7 +1467,7 @@ function setBg(mode) {
 
 function setSize(sz, btn) {
   state.exportSize = sz;
-  document.querySelectorAll('.sz-btn').forEach(b => b.classList.remove('on'));
+  btn.closest('.size-row').querySelectorAll('.sz-btn').forEach(b => b.classList.remove('on'));
   btn.classList.add('on');
 }
 
